@@ -10,6 +10,7 @@
 #include <boost/graph/bellman_ford_shortest_paths.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include "globals.h"
+#include <tuple>
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;
@@ -42,12 +43,13 @@ struct ksp {
     void print_edges();
     void add_edge(int n0, int n1, float w, int id);
     void invert_edge(Edge e, bool inv_algebraic_sign);
-    void invert_edges_on_path(EdgePath edge_path, bool inv_algebraic_sign);
+    void invert_edges(EdgePath edge_path, bool inv_algebraic_sign);
     void set_source_id(int id);
     void set_sink_id(int id);
-    std::pair<EdgePath, bool> bellman_ford_shortest_paths();
-    std::pair<EdgePath, bool> dijkstra_shortest_paths();
+    std::tuple<EdgePath, bool, std::vector<int>> bellman_ford_shortest_paths();
+    std::tuple<EdgePath, bool, std::vector<int>> dijkstra_shortest_paths();
 
+    void cost_transform(const std::vector<int> & distance);
 
     std::string hello() { return "Just nod if you can hear me!"; }
 

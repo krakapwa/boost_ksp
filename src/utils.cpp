@@ -46,7 +46,9 @@ void print_all(const MyGraph & g){
     std::cout << "------ edges --------" << std::endl;
     EdgeIter ei, ei_end;
     for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
-        std::cout << "edge id: " << g[*ei].id << ", weight: " << g[*ei].weight << std::endl;
+        std::cout << "edge: (" << source(*ei, g) << "," <<
+            target(*ei, g) << ") id: " << g[*ei].id <<
+            ", weight: " << g[*ei].weight << std::endl;
 
     std::cout << "--------------" << std::endl;
 
@@ -58,7 +60,7 @@ EdgePath vertpath_to_edgepath(VertexPath path, const MyGraph & g){
 
     VertexPath::reverse_iterator it;
     for (it=path.rbegin(); it != path.rend()-1; ++it) {
-        std::cout << "u, v: " << *it << "," << *std::next(it) << std::endl;
+        //std::cout << "u, v: " << *it << "," << *std::next(it) << std::endl;
         e_tmp = edge(*it, *std::next(it), g);
         ep.push_back(e_tmp.first);
 
