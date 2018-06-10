@@ -10,18 +10,22 @@ using namespace boost;
 
 enum edge_myweight_t { edge_myweight };
 enum edge_label_t { edge_label };
+enum edge_id_t { edge_id };
 
-namespace boost {
-  BOOST_INSTALL_PROPERTY(edge, myweight);
-  BOOST_INSTALL_PROPERTY(edge, label);
-}
+struct MyEdge{
+    float weight;
+    int label;
+    int id;
+};
 
-typedef property<edge_label_t, int> Label;
-typedef property<edge_myweight_t, float, Label> Weight;
 typedef adjacency_list<vecS, vecS, bidirectionalS,
-    no_property, Weight> MyGraph;
-typedef graph_traits<MyGraph>::vertex_iterator vertex_iter;
-typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > Path;
+    no_property, MyEdge, no_property> MyGraph;
+
+typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
+typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
+typedef graph_traits<MyGraph>::edge_descriptor Edge;
+typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > VertexPath;
+typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgePath;
+typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
-typedef property_map<MyGraph, vertex_index_t>::type IndexMap;
 #endif

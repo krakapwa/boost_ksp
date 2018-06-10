@@ -10,14 +10,23 @@ nodes = {'s': source_ind,
 g = libksp.ksp.create()
 g.new_graph(len(nodes.keys()))
 
-g.add_edge(nodes['s'], nodes['b'], 4)
-g.add_edge(nodes['s'], nodes['c'], 2)
-g.add_edge(nodes['b'], nodes['c'], 5)
-g.add_edge(nodes['c'], nodes['e'], 3)
-g.add_edge(nodes['b'], nodes['d'], 10)
-g.add_edge(nodes['e'], nodes['d'], 4)
-g.add_edge(nodes['d'], nodes['t'], 11)
+id_e = 0
+g.add_edge(nodes['s'], nodes['b'], 4, id_e)
+id_e += 1
+g.add_edge(nodes['s'], nodes['c'], 2, id_e)
+id_e += 1
+g.add_edge(nodes['b'], nodes['c'], 5, id_e)
+id_e += 1
+g.add_edge(nodes['c'], nodes['e'], 3, id_e)
+id_e += 1
+g.add_edge(nodes['b'], nodes['d'], 10, id_e)
+id_e += 1
+g.add_edge(nodes['e'], nodes['d'], 4, id_e)
+id_e += 1
+g.add_edge(nodes['d'], nodes['t'], 11, id_e)
 
 g.set_source_id(source_ind)
 g.set_sink_id(sink_ind)
-g.bellman_ford_shortest_paths()
+
+g.print_edges()
+g.do_ksp()
