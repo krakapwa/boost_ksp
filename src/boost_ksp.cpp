@@ -161,7 +161,7 @@ ShortestPathRes  ksp::bellman_ford_shortest_paths(){
         );
 
     if (r){
-        print_dist_pred(distances, predecessors, *G);
+        //print_dist_pred(distances, predecessors, *G);
 
         VertexPath shortest = pred_to_path(predecessors, *G,
                                            source_vertex, sink_vertex);
