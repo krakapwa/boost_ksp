@@ -1,19 +1,18 @@
 #include "utils.h"
 
-void print_distances(std::vector<int> distances, const MyGraph & g){
-        std::pair<VertexIter, VertexIter> vp;
-        for (vp = vertices(g); vp.first != vp.second; ++vp.first)
-            std::cout << *vp.first << ": " << distances[*vp.first] << std::endl;
-}
+VertexPath pred_to_path(std::vector<std::size_t> preds,
+                        const MyGraph & g,
+                        Vertex source,
+                        Vertex sink){
+    auto v_index = get(boost::vertex_index, g);
 
-VertexPath pred_to_path(std::vector<std::size_t> preds, const MyGraph & g, Vertex source, Vertex sink){
-    //std::vector< graph_traits< graph_t >::vertex_descriptor > path;
     VertexPath path;
-    Vertex current=sink;
+    Vertex current = sink;
 
-    while(current!=source) {
+    while(g[current].id != g[source].id) {
         path.push_back(current);
-        current=preds[current];
+        //std::cout << g[current].id << std::endl;
+        current=preds[v_index[current]];
     }
     path.push_back(source);
 
@@ -35,7 +34,8 @@ void print_path(VertexPath path, const MyGraph & g){
 void print_path(EdgePath path, const MyGraph & g){
 
     for(unsigned int i = 0; i < path.size(); ++i){
-        std::cout << "edge: " << path[i] << ", id: " << g[path[i]].id << std::endl;
+        std::cout << "edge: (" << g[source(path[i], g)].name << "," <<
+            g[target(path[i], g)].name << ")" << std::endl;
     }
 
     std::cout << "--------------" << std::endl;
@@ -43,13 +43,27 @@ void print_path(EdgePath path, const MyGraph & g){
 
 void print_all(const MyGraph & g){
 
-    std::cout << "------ edges --------" << std::endl;
+    std::cout << "------ edges " << " (n_edges: "
+              << num_edges(g) << ") --------" << std::endl;
     EdgeIter ei, ei_end;
-    for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
-        std::cout << "edge: (" << source(*ei, g) << "," <<
-            target(*ei, g) << ") id: " << g[*ei].id <<
-            ", weight: " << g[*ei].weight << std::endl;
+    MyGraph::vertex_descriptor v_in;
+    MyGraph::vertex_descriptor v_out;
 
+    for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
+        v_in = source(*ei, g);
+        v_out = target(*ei, g);
+        std::cout << "edge: (" << g[v_in].id << "," <<
+            g[v_out].id << ") / (" << g[v_in].name << "," << g[v_out].name <<
+            ") , id: " << g[*ei].id <<
+            ", weight: " << g[*ei].weight << std::endl;
+    }
+
+    std::cout << "------ vertices " << " (n_vertices: "
+              << num_vertices(g) << ") --------" << std::endl;
+    std::pair<VertexIter, VertexIter> vp;
+    for (vp = vertices(g); vp.first != vp.second; ++vp.first)
+        std::cout << "vertex: " << g[*vp.first].id << ", name: " <<
+            g[*vp.first].name << std::endl;
     std::cout << "--------------" << std::endl;
 
 }
@@ -66,4 +80,17 @@ EdgePath vertpath_to_edgepath(VertexPath path, const MyGraph & g){
 
     }
     return ep;
+}
+
+void print_dist_pred(std::vector<double> distances,
+                     std::vector<Vertex> predecessors,
+                     const MyGraph & g){
+    std::cout << "distances and parents:\n";
+    for (auto v : boost::make_iterator_range(boost::vertices(g))) {
+        std::string name = g[v].name;
+        std::cout << "distance(" << name << ") = " << distances[v] << ", ";
+        std::cout << "parent(" << name << ") = " <<
+            g[predecessors[v]].name << "\n";
+    }
+
 }

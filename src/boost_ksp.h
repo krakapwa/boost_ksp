@@ -7,6 +7,7 @@
 #include <float.h>
 #include <boost/property_map/property_map.hpp>
 #include "utils.h"
+#include "globals.h"
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;

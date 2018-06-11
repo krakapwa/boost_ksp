@@ -1,29 +1,62 @@
 #include "boost_ksp.h"
 
-void ksp::add_edge(int n0, int n1, float w, int id)
+Vertex ksp::my_add_vertex(int id, std::string str){
+    // This passes through all vertices (overhead).
+
+    std::pair<VertexIter, VertexIter> vp;
+    for (vp = vertices(*G); vp.first != vp.second; ++vp.first)
+        if((*G)[*(vp.first)].id == id){
+            //std::cout << "vertex was already there, id: " <<
+            //    (*G)[*(vp.first)].id << std::endl;
+
+            return *(vp.first);
+        }
+
+    //std::cout << "added new vertex" << std::endl;
+    Vertex res = boost::add_vertex(*G);
+    (*G)[res].name = str;
+    (*G)[res].id = id;
+
+    //std::cout << "num_vertices: " << num_vertices(*G) << std::endl;
+    return res;
+}
+
+void ksp::add_edge(int n0,
+                   int n1,
+                   double w,
+                   int id,
+                   std::string str_0="",
+                   std::string str_1="")
 {
-    MyEdge e;
-    e.weight = w;
-    e.label = 1;
-    e.id = id;
-    boost::add_edge(n0, n1, e, *G);
+
+    // Add two vertices
+    Vertex v0 = my_add_vertex(n0, str_0);
+    Vertex v1 = my_add_vertex(n1, str_1);
+
+    std::pair<MyGraph::edge_descriptor, bool> e = boost::add_edge(v0, v1, *G);
+
+    (*G)[e.first].weight = w;
+    (*G)[e.first].label = 1;
+    (*G)[e.first].id = id;
 
 }
 
-void ksp::set_source_id(int id)
+void ksp::set_source(int id, std::string str)
 {
-    source_id = id;
+    source_vertex = my_add_vertex(id, str);
+
 }
 
-void ksp::set_sink_id(int id)
+void ksp::set_sink(int id, std::string str)
 {
-    sink_id = id;
+    sink_vertex = my_add_vertex(id, str);
 }
 
-void ksp::new_graph(int a_n_vertices){
+void ksp::new_graph(int a_n_vertices=0){
 
-    std::cout << "Creating graph" << std::endl;
     n_vertices = a_n_vertices;
+    std::cout << "Creating graph with n_vertices: " <<
+              n_vertices << std::endl;
     G = new MyGraph(n_vertices);
 
 }
@@ -36,34 +69,34 @@ shared_ptr<ksp> ksp::create() {
 bool ksp::do_ksp(){
 
     // Store output of shortest-paths
-    std::tuple<EdgePath, bool, std::vector<int>> res;
+    ShortestPathRes res;
     EdgePath res_path;
     bool res_ok;
-    std::vector<int> res_distance;
+    std::vector<double> res_distance;
+
 
     std::cout << "Bellman-Ford" << std::endl;
     res = bellman_ford_shortest_paths();
     std::tie(res_path, res_ok, res_distance) = res;
-
     print_path(res_path, *G);
+
     invert_edges(res_path, true);
     print_all(*G);
     cost_transform(res_distance);
-    print_all(*G);
+    std::cout << "Dijkstra" << std::endl;
     res = dijkstra_shortest_paths();
     std::tie(res_path, res_ok, res_distance) = res;
     print_path(res_path, *G);
-    print_all(*G);
     return true;
 }
 
-std::tuple<EdgePath, bool, std::vector<int>> ksp::dijkstra_shortest_paths(){
-    const int nb_vertices = num_vertices(*G);
+ShortestPathRes ksp::dijkstra_shortest_paths(){
+
     EdgePath out_path;
-    std::tuple<EdgePath, bool, std::vector<int>> out;
+    ShortestPathRes out;
 
     // init the distance
-    std::vector<int> distance( num_vertices(*G));
+    std::vector<double> distances( num_vertices(*G));
 
     std::vector<std::size_t> predecessors(num_vertices(*G));
 
@@ -72,9 +105,9 @@ std::tuple<EdgePath, bool, std::vector<int>> ksp::dijkstra_shortest_paths(){
     bool r = true;
     boost::dijkstra_shortest_paths(
         *G,
-        source_id,
+        source_vertex,
         weight_map(get(&MyEdge::weight, *G)).
-        distance_map(make_iterator_property_map(distance.begin(),
+        distance_map(make_iterator_property_map(distances.begin(),
                                                        get(vertex_index,*G))).
         predecessor_map(boost::make_iterator_property_map(predecessors.begin(),
                                                           get(vertex_index,*G)))
@@ -83,7 +116,8 @@ std::tuple<EdgePath, bool, std::vector<int>> ksp::dijkstra_shortest_paths(){
 
     if (r){
         //print_distances(distance, *G);
-        VertexPath shortest = pred_to_path(predecessors, *G, source_id, sink_id);
+        VertexPath shortest = pred_to_path(predecessors, *G,
+                                           source_vertex, sink_vertex);
         //print_path(shortest, *G);
         out_path = vertpath_to_edgepath(shortest, *G);
 
@@ -93,39 +127,44 @@ std::tuple<EdgePath, bool, std::vector<int>> ksp::dijkstra_shortest_paths(){
         out_path = EdgePath();
     }
 
-    out = std::make_tuple(out_path, r, distance);
+    out = std::make_tuple(out_path, r, distances);
 
     return out;
 }
 
-std::tuple<EdgePath, bool, std::vector<int>> ksp::bellman_ford_shortest_paths(){
-    std::tuple<EdgePath, bool, std::vector<int>> out;
+ShortestPathRes  ksp::bellman_ford_shortest_paths(){
+    ShortestPathRes   out;
     EdgePath out_path;
+    std::pair<VertexIter, VertexIter> vp;
+    auto v_index = get(boost::vertex_index, *G);
+    auto weight = boost::make_transform_value_property_map(
+        std::mem_fn(&MyEdge::weight),
+        get(boost::edge_bundle, *G));
 
-    const int nb_vertices = num_vertices(*G);
+    // init
+    std::vector<Vertex> predecessors(num_vertices(*G));
+    //for (vp = vertices(*G); vp.first != vp.second; ++vp.first)
+    //    predecessors[v_index[*vp.first]] = v_index[*vp.first];
 
-    // init the distance
-    std::vector<int> distance(nb_vertices, (std::numeric_limits<int>::max)());
-    distance[source_id] = 0; // the source is at distance 0
+    std::vector<double> distances(num_vertices(*G),
+                                  (std::numeric_limits<double>::max)());
+    distances[v_index[source_vertex]] = 0;
 
-    // init the predecessors (identity function)
-    std::vector<std::size_t> parent(nb_vertices);
-    for (int i = 0; i < nb_vertices; ++i)
-        parent[i] = i;
-
-    // call to the algorithm
     bool r = boost::bellman_ford_shortest_paths(
         *G,
-        n_vertices,
-        weight_map(get(&MyEdge::weight, *G)).
-        distance_map(&distance[0]).
-        predecessor_map(&parent[0])
+        num_vertices(*G),
+        weight_map(weight).
+        distance_map(make_iterator_property_map(distances.begin(),
+                                                v_index)).
+        predecessor_map(make_iterator_property_map(predecessors.begin(),
+                                                   v_index))
         );
 
     if (r){
-        //print_distances(distance, *G);
-        VertexPath shortest = pred_to_path(parent, *G, source_id, sink_id);
-        //print_path(shortest, *G);
+        print_dist_pred(distances, predecessors, *G);
+
+        VertexPath shortest = pred_to_path(predecessors, *G,
+                                           source_vertex, sink_vertex);
         out_path = vertpath_to_edgepath(shortest, *G);
 
     }
@@ -134,7 +173,7 @@ std::tuple<EdgePath, bool, std::vector<int>> ksp::bellman_ford_shortest_paths(){
         out_path = EdgePath();
     }
 
-    out = std::make_tuple(out_path, r, distance);
+    out = std::make_tuple(out_path, r, distances);
 
     return out;
 }
@@ -170,12 +209,12 @@ void ksp::invert_edges(EdgePath edge_path, bool inv_algebraic_sign){
     }
 }
 
-void ksp::cost_transform(const std::vector<int> & distance){
+void ksp::cost_transform(const std::vector<double> & distance){
 
     EdgeIter ei, ei_end;
-    float s_i;
-    float s_j;
-    float w_ij;
+    double s_i;
+    double s_j;
+    double w_ij;
     for (boost::tie(ei, ei_end) = edges(*G); ei != ei_end; ++ei){
 
         s_i = distance[source(*ei, *G)];

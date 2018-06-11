@@ -18,8 +18,13 @@ struct MyEdge{
     int id;
 };
 
+struct MyVertex{
+    std::string name;
+    int id;
+};
+
 typedef adjacency_list<vecS, vecS, bidirectionalS,
-    no_property, MyEdge, no_property> MyGraph;
+    MyVertex, MyEdge, no_property> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
@@ -28,4 +33,5 @@ typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > VertexPath;
 typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgePath;
 typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
+typedef std::tuple<EdgePath, bool, std::vector<double>> ShortestPathRes;
 #endif

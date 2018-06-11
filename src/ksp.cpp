@@ -21,8 +21,8 @@ BOOST_PYTHON_MODULE(libksp)
     .def("new_graph",&ksp::new_graph)
     .def("print_edges",&ksp::print_edges)
     .def("add_edge",&ksp::add_edge)
-    .def("set_source_id",&ksp::set_source_id)
-    .def("set_sink_id",&ksp::set_sink_id)
+    .def("set_source",&ksp::set_source)
+    .def("set_sink",&ksp::set_sink)
     .def("bellman_ford_shortest_paths",&ksp::bellman_ford_shortest_paths)
     ;
 }
