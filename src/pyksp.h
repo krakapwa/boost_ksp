@@ -47,8 +47,13 @@ struct ksp {
     Vertex my_add_vertex(int id, std::string str);
     void add_edge(int n0, int n1, double w, int id,
                   std::string str_0, std::string str_1);
-    void invert_edge(Edge e, bool inv_algebraic_sign);
-    void invert_edges(EdgePath edge_path, bool inv_algebraic_sign);
+    void invert_edge(Edge e,
+                     bool inv_label,
+                     bool inv_algebraic_sign);
+    void invert_edges(EdgeSet edge_path,
+                      bool inv_label,
+                      bool inv_algebraic_sign);
+    void augment(EdgeSets P_l, EdgeSet p_inter);
     void set_source(int id, std::string str);
     void set_sink(int id, std::string str);
     ShortestPathRes bellman_ford_shortest_paths();

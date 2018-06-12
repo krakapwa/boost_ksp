@@ -70,29 +70,47 @@ bool ksp::do_ksp(){
 
     // Store output of shortest-paths
     ShortestPathRes res;
-    EdgePath res_path;
+    EdgeSet res_path;
     bool res_ok;
     std::vector<double> res_distance;
 
+    EdgeSets P;
+
+    //int l_max = std::numeric_limits<int>::max();
+    int l_max = 1;
 
     std::cout << "Bellman-Ford" << std::endl;
     res = bellman_ford_shortest_paths();
     std::tie(res_path, res_ok, res_distance) = res;
     print_path(res_path, *G);
 
-    invert_edges(res_path, true);
+    P.push_back(res_path);
+
+    for(int l = 0; l < l_max; ++l){
+
+        std::cout << "l: " << l << std::endl;
+
+        if(l != 0){
+            // Check costs for minima
+        }
+
+    invert_edges(res_path, true, true);
     print_all(*G);
     cost_transform(res_distance);
     std::cout << "Dijkstra" << std::endl;
     res = dijkstra_shortest_paths();
     std::tie(res_path, res_ok, res_distance) = res;
     print_path(res_path, *G);
+    std::cout << "Augment" << std::endl;
+
+    augment(P, res_path);
+    }
     return true;
 }
 
 ShortestPathRes ksp::dijkstra_shortest_paths(){
 
-    EdgePath out_path;
+    EdgeSet out_path;
     ShortestPathRes out;
 
     // init the distance
@@ -124,7 +142,7 @@ ShortestPathRes ksp::dijkstra_shortest_paths(){
     }
     else{
         std::cout << "negative cycle" << std::endl;
-        out_path = EdgePath();
+        out_path = EdgeSet();
     }
 
     out = std::make_tuple(out_path, r, distances);
@@ -134,7 +152,7 @@ ShortestPathRes ksp::dijkstra_shortest_paths(){
 
 ShortestPathRes  ksp::bellman_ford_shortest_paths(){
     ShortestPathRes   out;
-    EdgePath out_path;
+    EdgeSet out_path;
     std::pair<VertexIter, VertexIter> vp;
     auto v_index = get(boost::vertex_index, *G);
     auto weight = boost::make_transform_value_property_map(
@@ -170,7 +188,7 @@ ShortestPathRes  ksp::bellman_ford_shortest_paths(){
     }
     else{
         std::cout << "negative cycle" << std::endl;
-        out_path = EdgePath();
+        out_path = EdgeSet();
     }
 
     out = std::make_tuple(out_path, r, distances);
@@ -183,28 +201,33 @@ void ksp::print_edges(){
     print_all(*G);
 };
 
-void ksp::invert_edge(Edge e, bool inv_algebraic_sign){
+void ksp::invert_edge(Edge e, bool inv_label, bool inv_algebraic_sign){
 
     MyEdge e_new;
-    e_new.label = (*G)[e].label;
     e_new.id = (*G)[e].id;
     int u = source(e, *G);
     int v = target(e, *G);
+    e_new.label = (*G)[e].label;
+    e_new.weight = -(*G)[e].weight;
 
     if(inv_algebraic_sign)
         e_new.weight = -(*G)[e].weight;
 
+    if(inv_algebraic_sign)
+        e_new.label = -(*G)[e].label;
 
     boost::add_edge(v, u, e_new, *G);
     boost::remove_edge(u, v, *G);
 
 };
 
-void ksp::invert_edges(EdgePath edge_path, bool inv_algebraic_sign){
+void ksp::invert_edges(EdgeSet edge_path,
+                       bool inv_label,
+                       bool inv_algebraic_sign){
 
-    EdgePath::iterator it;
+    EdgeSet::iterator it;
     for (it=edge_path.begin(); it != edge_path.end(); ++it) {
-        ksp::invert_edge(*it, inv_algebraic_sign);
+        ksp::invert_edge(*it, inv_label, inv_algebraic_sign);
 
     }
 }
@@ -222,4 +245,76 @@ void ksp::cost_transform(const std::vector<double> & distance){
         w_ij = (*G)[*ei].weight;
         (*G)[*ei].weight = w_ij + s_i - s_j;
     }
+}
+
+void ksp::augment(EdgeSets P_l, EdgeSet p_inter){
+    EdgeSets P_l_plus_1;
+    EdgeSet p_cut; // edges of label -1 occupied by p_inter
+
+    Vertex v_in;
+    Vertex v_out;
+
+    //Populate p_cut
+    for(unsigned int i=0; i < p_inter.size(); ++i){
+        v_in = source(p_inter[i], *G);
+        v_out = target(p_inter[i], *G);
+        if((*G)[p_inter[i]].label == -1){
+            std::cout << "cut at edge: ("  <<
+                (*G)[v_in].name << "," <<
+                (*G)[v_out].name << ")" << std::endl;
+            p_cut.push_back(p_inter[i]);
+        }
+    }
+
+    // Erase edges of p_cut from p_inter
+    for(unsigned int i=0; i < p_cut.size(); ++i)
+        p_inter = remove_edge_from_set(p_cut[i],
+                                        p_inter,
+                                       *G,
+                                       false);
+    std::cout << "removed edges of p_cut from p_inter" << std::endl;
+
+
+    //Loop over P_l and remove edges belonging to p_cut
+    std::tuple<EdgeSet, EdgeSet, Edge> res_append;
+    for(unsigned int i=0; i < P_l.size(); ++i){
+        EdgeSet p = P_l[i];
+
+        // Loop over p = P_l[i]
+        int ind_edge = 0;
+        Edge curr_edge = p[ind_edge];
+        while(target(curr_edge, *G) != sink_vertex){
+            print_edge(curr_edge, *G);
+            print_path(p_cut, *G);
+            if(edge_is_in_set(curr_edge, p_cut, *G, true)){
+                std::cout << "edge is in p_cut" << std::endl;
+                p = remove_edge_from_set(curr_edge,
+                                         p,
+                                         *G,
+                                         false);
+                res_append = append_inter(p,
+                             p_inter,
+                             p_cut,
+                             (*G)[source(curr_edge, *G)],
+                             (*G)[sink_vertex],
+                             *G);
+
+                std::tie(p, p_inter, curr_edge) = res_append;
+                std::cout << "p" << std::endl;
+                print_path(p, *G);
+                std::cout << "p_inter" << std::endl;
+                print_path(p_inter, *G);
+            }
+            else{
+                ind_edge += 1;
+                curr_edge = p[ind_edge];
+            }
+
+        }
+
+        P_l_plus_1.push_back(p);
+    }
+
+    // invert directions (and algebraic signs?) of all paths in P_l
+    // add last path of P_l from p_inter
 }
