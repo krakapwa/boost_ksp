@@ -227,7 +227,7 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
         int ind_edge = 0;
         Edge curr_edge = p[ind_edge];
         while(target(curr_edge, *G) != sink_vertex){
-            //print_edge(curr_edge, *G);
+            utils::print_edge(curr_edge, *G);
             //print_path(p_cut, *G);
             if(utils::edge_is_in_set(curr_edge, p_cut, *G, true)){
                 //std::cout << "edge is in p_cut" << std::endl;
@@ -244,12 +244,12 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
                                                  *G);
 
                 std::tie(p, p_inter, leftovers, curr_edge) = res_append;
-                //std::cout << "p" << std::endl;
-                //print_path(p, *G);
-                //std::cout << "p_inter" << std::endl;
-                //print_path(p_inter, *G);
-                //std::cout << "leftovers" << std::endl;
-                //print_path(leftovers, *G);
+                std::cout << "p" << std::endl;
+                utils::print_path(p, *G);
+                std::cout << "p_inter" << std::endl;
+                utils::print_path(p_inter, *G);
+                std::cout << "leftovers" << std::endl;
+                utils::print_path(leftovers, *G);
             }
             else{
                 ind_edge += 1;

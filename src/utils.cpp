@@ -282,18 +282,25 @@ namespace utils{
 
         Edge curr_edge = p_inter[ind_start];
 
-        // Append edges of p_inter until: (1) sink is not reached
+        // Append edges of p_inter until:
+        // (1) sink is reached
         // (2) target of edge is not part of p (case where we stop)
+        // (3) p_inter is "broken"
         while(true){
             to_append.push_back(curr_edge);
             if(g[target(curr_edge, g)].id == sink.id)
                 break;
             if(find_ind_edge_starting_with(p, g[target(curr_edge, g)], g) != -1)
                 break;
+            if(g[p_inter[ind_start]].id_vertex_out !=
+               g[p_inter[ind_start+1]].id_vertex_in)
+                break;
             ind_start += 1;
             curr_edge = p_inter[ind_start];
         }
 
+        std::cout << "to_append: " << std::endl;
+        print_path(to_append, g);
         // Remove edges of to_append from p_inter
         for(unsigned int i=0; i<to_append.size(); ++i)
             p_inter = remove_edge_from_set(to_append[i], p_inter, g);
@@ -354,7 +361,6 @@ namespace utils{
 
         return std::make_tuple(p, p_inter, leftovers, to_append.back());
     }
-
 
     void invert_edge(Edge e,
                         bool inv_label,
