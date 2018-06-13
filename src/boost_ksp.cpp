@@ -1,59 +1,29 @@
 #include "boost_ksp.h"
 
-Vertex ksp::my_add_vertex(int id, std::string str){
-    // This passes through all vertices (overhead).
-
-    std::pair<VertexIter, VertexIter> vp;
-    for (vp = vertices(*G); vp.first != vp.second; ++vp.first)
-        if((*G)[*(vp.first)].id == id){
-            //std::cout << "vertex was already there, id: " <<
-            //    (*G)[*(vp.first)].id << std::endl;
-
-            return *(vp.first);
-        }
-
-    //std::cout << "added new vertex" << std::endl;
-    Vertex res = boost::add_vertex(*G);
-    (*G)[res].name = str;
-    (*G)[res].id = id;
-
-    //std::cout << "num_vertices: " << num_vertices(*G) << std::endl;
-    return res;
+Vertex ksp::add_vertex(int id, std::string str){
+    return utils::add_vertex(*G, id, str);
 }
 
-bool ksp::my_add_edge(int n0,
+bool ksp::add_edge(int n0,
                       int n1,
                       double w,
                       int id,
                       std::string str_0,
                       std::string str_1,
-                      int label)
-{
+                      int label){
 
-    // Add two vertices
-    Vertex v0 = my_add_vertex(n0, str_0);
-    Vertex v1 = my_add_vertex(n1, str_1);
-
-    std::pair<MyGraph::edge_descriptor, bool> e = boost::add_edge(v0, v1, *G);
-
-    (*G)[e.first].weight = w;
-    (*G)[e.first].label = label;
-    (*G)[e.first].id = id;
-    (*G)[e.first].id_vertex_in = n0;
-    (*G)[e.first].id_vertex_out = n1;
-
-    return true;
+    return utils::add_edge(*G, n0, n1, w, id, str_0, str_1, label);
 }
 
 void ksp::set_source(int id, std::string str)
 {
-    source_vertex = my_add_vertex(id, str);
+    source_vertex = utils::add_vertex(*G, id, str);
 
 }
 
 void ksp::set_sink(int id, std::string str)
 {
-    sink_vertex = my_add_vertex(id, str);
+    sink_vertex = utils::add_vertex(*G, id, str);
 }
 
 void ksp::new_graph(int a_n_vertices=0){
@@ -81,16 +51,16 @@ bool ksp::do_ksp(){
     EdgeSets P;
 
     //int l_max = std::numeric_limits<int>::max();
-    int l_max = 1;
+    int l_max = 3;
 
     std::cout << "Bellman-Ford" << std::endl;
     res = bellman_ford_shortest_paths();
     std::tie(res_path, res_ok, res_distance) = res;
-    print_path(res_path, *G);
+    utils::print_path(res_path, *G);
 
     P.push_back(res_path);
 
-    for(int l = 0; l < l_max; ++l){
+    for(int l = 1; l < l_max; ++l){
 
         std::cout << "l: " << l << std::endl;
 
@@ -98,16 +68,21 @@ bool ksp::do_ksp(){
             // Check costs for minima
         }
 
-        invert_edges(res_path, true, true, *G);
-        print_all(*G);
+        utils::invert_edges(P, true, true, *G);
         cost_transform(res_distance);
+        std::cout << "done cost_transform" << std::endl;
+        utils::print_all(*G);
         std::cout << "Dijkstra" << std::endl;
         res = dijkstra_shortest_paths();
         std::tie(res_path, res_ok, res_distance) = res;
-        print_path(res_path, *G);
+        utils::print_path(res_path, *G);
         std::cout << "Augment" << std::endl;
 
         P = augment(P, res_path);
+        std::cout << "Solution at l= "<< l << std::endl;
+        utils::print_paths(P, *G);
+        utils::print_all(*G);
+
     }
     return true;
 }
@@ -138,10 +113,10 @@ ShortestPathRes ksp::dijkstra_shortest_paths(){
 
     if (r){
         //print_distances(distance, *G);
-        VertexPath shortest = pred_to_path(predecessors, *G,
+        VertexPath shortest = utils::pred_to_path(predecessors, *G,
                                            source_vertex, sink_vertex);
         //print_path(shortest, *G);
-        out_path = vertpath_to_edgepath(shortest, *G);
+        out_path = utils::vertpath_to_edgepath(shortest, *G);
 
     }
     else{
@@ -185,9 +160,9 @@ ShortestPathRes  ksp::bellman_ford_shortest_paths(){
     if (r){
         //print_dist_pred(distances, predecessors, *G);
 
-        VertexPath shortest = pred_to_path(predecessors, *G,
+        VertexPath shortest = utils::pred_to_path(predecessors, *G,
                                            source_vertex, sink_vertex);
-        out_path = vertpath_to_edgepath(shortest, *G);
+        out_path = utils::vertpath_to_edgepath(shortest, *G);
 
     }
     else{
@@ -235,7 +210,7 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
 
     // Erase edges of p_cut from p_inter
     for(unsigned int i=0; i < p_cut.size(); ++i)
-        p_inter = remove_edge_from_set(p_cut[i],
+        p_inter = utils::remove_edge_from_set(p_cut[i],
                                         p_inter,
                                        *G,
                                        false);
@@ -254,19 +229,19 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
         while(target(curr_edge, *G) != sink_vertex){
             //print_edge(curr_edge, *G);
             //print_path(p_cut, *G);
-            if(edge_is_in_set(curr_edge, p_cut, *G, true)){
+            if(utils::edge_is_in_set(curr_edge, p_cut, *G, true)){
                 //std::cout << "edge is in p_cut" << std::endl;
-                p = remove_edge_from_set(curr_edge,
+                p = utils::remove_edge_from_set(curr_edge,
                                          p,
                                          *G,
                                          false);
-                res_append = append_inter(p,
-                                          p_inter,
-                                          p_cut,
-                                          leftovers,
-                                          (*G)[source(curr_edge, *G)],
-                                          (*G)[sink_vertex],
-                                          *G);
+                res_append = utils::append_inter(p,
+                                                 p_inter,
+                                                 p_cut,
+                                                 leftovers,
+                                                 (*G)[source(curr_edge, *G)],
+                                                 (*G)[sink_vertex],
+                                                 *G);
 
                 std::tie(p, p_inter, leftovers, curr_edge) = res_append;
                 //std::cout << "p" << std::endl;
@@ -289,13 +264,13 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
     // invert directions (and algebraic signs?) of all paths in P_l
     //print_all(*G);
     //std::cout << "getting edges with label = -1" << std::endl;
-    EdgeSet to_invert = get_edges_from_label(*G, -1);
+    EdgeSet to_invert = utils::get_edges_from_label(*G, -1);
     //std::cout << "inverting paths in augment" << std::endl;
     for(unsigned int i = 0; i<to_invert.size(); ++i){
-        invert_edge(to_invert[i],
-                    false,
-                    true,
-                    *G);
+        utils::invert_edge(to_invert[i],
+                           false,
+                           true,
+                           *G);
     }
 
     // build added path p_ from p_inter and leftovers
@@ -309,7 +284,9 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
         if((*G)[curr_vertex].id == (*G)[sink_vertex].id)
             break;
         // Search in p_inter for next edge
-        ind = find_ind_edge_starting_with(p_inter, (*G)[curr_vertex], (*G));
+        ind = utils::find_ind_edge_starting_with(p_inter,
+                                                 (*G)[curr_vertex],
+                                                 (*G));
         if(ind == -1){ // Search in leftovers
             for (boost::tie(ei, ei_end) = out_edges(curr_vertex, *G);
                 ei != ei_end; ++ei) {
@@ -328,11 +305,8 @@ EdgeSets ksp::augment(EdgeSets P_l, EdgeSet p_inter){
     P_l_plus_1.push_back(p_);
 
     //std::cout << "setting label=1 on edges:" << std::endl;
-    set_label_to_all(*G, 1);
-    print_all(*G);
-
-    std::cout << "Solution:" << std::endl;
-    print_paths(P_l_plus_1, *G);
+    utils::set_label_to_all(*G, 1);
+    utils::print_all(*G);
 
     return P_l_plus_1;
 }

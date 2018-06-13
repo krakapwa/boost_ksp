@@ -10,8 +10,8 @@
 
 using namespace boost::python;
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(my_add_edge_member_overloads,
-                                       my_add_edge,
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(add_edge_member_overloads,
+                                       add_edge,
                                        3,
                                        7)
 
@@ -26,9 +26,8 @@ BOOST_PYTHON_MODULE(libksp)
     .def("hello",&ksp::hello)
     .def("do_ksp",&ksp::do_ksp)
     .def("new_graph",&ksp::new_graph)
-    .def("print_edges",&ksp::print_edges)
-    .def("add_edge", &ksp::my_add_edge,
-            my_add_edge_member_overloads(
+    .def("add_edge", &ksp::add_edge,
+            add_edge_member_overloads(
               args("n0",
                    "n1",
                    "w",
@@ -36,7 +35,7 @@ BOOST_PYTHON_MODULE(libksp)
                    "str_0",
                    "str_1",
                    "label"),
-              "docstring my_add_edge")
+              "docstring add_edge")
     )
     .def("set_source",&ksp::set_source)
     .def("set_sink",&ksp::set_sink)

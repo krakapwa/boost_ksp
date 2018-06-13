@@ -41,5 +41,4 @@ id_e += 1
 g.set_source(source_ind, 'a')
 g.set_sink(sink_ind, 'z')
 
-g.print_edges()
 g.do_ksp()

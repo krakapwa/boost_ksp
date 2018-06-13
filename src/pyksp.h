@@ -43,27 +43,15 @@ struct ksp {
     void new_graph(int n_vertices);
 
     bool do_ksp();
-    Vertex my_add_vertex(int id, std::string str);
+    Vertex add_vertex(int id, std::string str);
 
-    bool my_add_edge(int n0,
+    bool add_edge(int n0,
                      int n1,
                      double w,
                      int id=-1,
                      std::string str_0="",
                      std::string str_1="",
                      int label=1);
-    void invert_edge(Edge e,
-                     bool inv_label,
-                     bool inv_algebraic_sign,
-                     MyGraph & g);
-    void invert_edges(EdgeSet edge_path,
-                      bool inv_label,
-                      bool inv_algebraic_sign,
-                      MyGraph & g);
-    void invert_edges(EdgeSets set,
-                      bool inv_label,
-                      bool inv_algebraic_sign,
-                      MyGraph & g);
     EdgeSets augment(EdgeSets P_l, EdgeSet p_inter);
     void set_source(int id, std::string str);
     void set_sink(int id, std::string str);
