@@ -17,6 +17,8 @@ struct MyEdge{
     float weight;
     int label;
     int id;
+    int id_vertex_in;
+    int id_vertex_out;
 };
 
 struct MyVertex{

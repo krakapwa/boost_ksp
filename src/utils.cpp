@@ -44,6 +44,42 @@ void print_path(EdgeSet path, const MyGraph & g){
     std::cout << std::endl;
 }
 
+void print_paths(EdgeSets paths, const MyGraph & g){
+
+    for(unsigned int i = 0; i < paths.size(); ++i){
+        std::cout << "path " << i << std::endl;
+        print_path(paths[i], g);
+    }
+    std::cout << std::endl;
+}
+
+EdgeSet get_edges_from_label(const MyGraph & g, int label){
+    EdgeIter ei, ei_end;
+    EdgeSet out;
+
+    for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
+        if(g[*ei].label == label)
+            out.push_back(*ei);
+    }
+    return out;
+}
+
+void set_label_to_all(MyGraph & g, int label){
+
+    EdgeIter ei, ei_end;
+
+    for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
+        g[*ei].label = label;
+    }
+}
+
+void set_label_to_edges(MyGraph & g, EdgeSet es, int label){
+
+    for(unsigned int i=0; i<es.size(); ++i){
+        g[es[i]].label = label;
+    }
+}
+
 void print_all(const MyGraph & g){
 
     std::cout << "------ edges " << " (n_edges: "
@@ -151,7 +187,7 @@ EdgeSet remove_edge_from_set(Edge e,
         curr_v_in = source(p[i], g);
         curr_v_out = target(p[i], g);
         if((g[curr_v_in].id == g[v_in].id) && (g[curr_v_out].id == g[v_out].id)){
-            std::cout << "removing edge #" << i << std::endl;
+            //std::cout << "removing edge #" << i << std::endl;
             p.erase(p.begin() + i);
             break;
         }
@@ -185,10 +221,11 @@ int find_ind_edge_starting_with(EdgeSet p,
     return -1;
 }
 
-std::tuple<EdgeSet, EdgeSet, Edge>
+std::tuple<EdgeSet, EdgeSet, EdgeSet, Edge>
 append_inter(EdgeSet p,
              EdgeSet p_inter,
              EdgeSet p_cut,
+             EdgeSet leftovers,
              MyVertex start,
              MyVertex sink,
              const MyGraph & g){
@@ -219,7 +256,6 @@ append_inter(EdgeSet p,
     // will be added to p_inter
     // approach: from vertex target(curr_edge), pass through edges labeled -1
     // until we find no out_edges with label -1
-    EdgeSet leftovers;
     Vertex start_vertex = target(curr_edge, g);
     MyGraph::out_edge_iterator ei, ei_end;
     bool found_a_leftover = true;
@@ -265,11 +301,50 @@ append_inter(EdgeSet p,
     //std::cout << "p after appending to_append: " << std::endl;
     //print_path(p, g);
 
-    // remove left overs from p and add to p_inter
+    // remove left overs from p
     for(unsigned int i=0; i<leftovers.size(); ++i)
         p = remove_edge_from_set(leftovers[i], p, g, true);
-    for(unsigned int i=0; i<leftovers.size(); ++i)
-        p_inter.push_back(leftovers[i]);
 
-    return std::make_tuple(p, p_inter, to_append.back());
+
+    return std::make_tuple(p, p_inter, leftovers, to_append.back());
+}
+
+
+void ksp::invert_edge(Edge e,
+                      bool inv_label,
+                      bool inv_algebraic_sign,
+                      MyGraph & g){
+
+    Vertex u = source(e, g);
+    Vertex v = target(e, g);
+    double weight = g[e].weight;
+    int label = g[e].label;
+    int id = g[e].id;
+
+    if(inv_algebraic_sign)
+        weight = -weight;
+
+    if(inv_label)
+        label = -label;
+
+    my_add_edge(g[v].id,
+             g[u].id,
+             weight,
+             id,
+             g[v].name,
+             g[u].name,
+             label);
+
+    boost::remove_edge(u, v, *G);
+};
+
+void ksp::invert_edges(EdgeSet edge_path,
+                       bool inv_label,
+                       bool inv_algebraic_sign,
+                       MyGraph & g){
+
+    EdgeSet::iterator it;
+    for (it=edge_path.begin(); it != edge_path.end(); ++it) {
+        invert_edge(*it, inv_label, inv_algebraic_sign, g);
+    }
 }
