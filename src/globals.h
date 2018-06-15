@@ -13,7 +13,11 @@ enum edge_myweight_t { edge_myweight };
 enum edge_label_t { edge_label };
 enum edge_id_t { edge_id };
 
-struct MyEdge{
+struct GraphProperty{
+    std::string name;
+};
+
+struct EdgeProperty{
     float weight;
     int label;
     int id;
@@ -21,18 +25,18 @@ struct MyEdge{
     int id_vertex_out;
 };
 
-struct MyVertex{
+struct VertexProperty{
     std::string name;
     int id;
 
-    bool operator==(MyVertex v){
+    bool operator==(VertexProperty v){
         if(id == v.id)
             return true;
         else
             return false;
     }
 
-    bool operator!=(MyVertex v){
+    bool operator!=(VertexProperty v){
         if(id != v.id)
             return true;
         else
@@ -41,7 +45,7 @@ struct MyVertex{
 };
 
 typedef adjacency_list<vecS, vecS, bidirectionalS,
-    MyVertex, MyEdge, no_property> MyGraph;
+    VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;

@@ -10,6 +10,8 @@
 #include <boost/graph/bellman_ford_shortest_paths.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/property_map/transform_value_property_map.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/graph/copy.hpp>
 #include "globals.h"
 #include <tuple>
 
@@ -21,6 +23,8 @@ using namespace boost;
 struct ksp {
 
     MyGraph * G;
+    MyGraph * G_c; //with transformed edge costs
+    MyGraph * G_l; //with transformed edge costs
 
     // gets the weight property
     //property_map<MyGraph, edge_myweight_t>::type weight_pmap =
@@ -52,13 +56,18 @@ struct ksp {
                      std::string str_0="",
                      std::string str_1="",
                      int label=1);
-    EdgeSets augment(EdgeSets P_l, EdgeSet p_inter);
+    EdgeSets augment(EdgeSets P_l,
+                     EdgeSet p_inter,
+                     MyGraph & g,
+                     MyGraph & g_c,
+                     MyGraph & g_l);
     void set_source(int id, std::string str);
     void set_sink(int id, std::string str);
-    ShortestPathRes bellman_ford_shortest_paths();
-    ShortestPathRes dijkstra_shortest_paths();
+    ShortestPathRes bellman_ford_shortest_paths(const MyGraph & g);
+    ShortestPathRes dijkstra_shortest_paths(const MyGraph & g);
 
-    void cost_transform(const std::vector<double> & distance);
+    void cost_transform(const std::vector<double> & distance,
+                        const MyGraph & g_in, MyGraph & g_out);
 
     std::string hello() { return "Just nod if you can hear me!"; }
 
