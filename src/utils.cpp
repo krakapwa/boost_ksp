@@ -453,12 +453,17 @@ namespace utils{
 
     EdgeSet translate_edge_set(EdgeSet p,
                                const MyGraph & g_p,
-                               const MyGraph & g){
+                               const MyGraph & g,
+                               bool inv_mode=false){
 
         EdgeSet p_out;
         Edge e;
         for(unsigned int i=0; i<p.size(); ++i){
-            e = edge(source(p[i], g_p), target(p[i], g_p), g).first;
+            if(inv_mode)
+                e = edge(target(p[i], g_p), source(p[i], g_p), g).first;
+            else
+                e = edge(source(p[i], g_p), target(p[i], g_p), g).first;
+
             p_out.push_back(e);
         }
         return p_out;
@@ -521,8 +526,8 @@ namespace utils{
     }
 
     bool vertex_is_in_set(Vertex v,
-                        EdgeSet p,
-                        const MyGraph & g){
+                          EdgeSet p,
+                          const MyGraph & g){
 
         EdgeSet::iterator it;
         //int id_v = g[v].id;

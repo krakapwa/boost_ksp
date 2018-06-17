@@ -48,7 +48,8 @@ namespace utils {
                       MyGraph & g_out);
     EdgeSet translate_edge_set(EdgeSet p,
                                const MyGraph & g_p,
-                               const MyGraph & g);
+                               const MyGraph & g,
+                               bool inv_mode);
 
     EdgeSet vertpath_to_edgepath(VertexPath path, const MyGraph & g);
 

@@ -84,14 +84,11 @@ bool ksp::do_ksp(){
         for(unsigned int i=0; i<P.size(); ++i)
             utils::set_label_on_path(P[i], -(i+1), *G);
 
-        //std::cout << "before invert edges" << std::endl;
-        //utils::print_all(*G_l);
-        //std::cout << "after invert edges" << std::endl;
-        utils::invert_edges(P, true, true, *G, *G_l);
-        utils::invert_edges(P, true, true, *G, *G_c);
-        //utils::print_all(*G_l);
-        //utils::print_all(*G_c);
-        cost_transform(res_distance, *G_l, *G_c);
+        utils::invert_edges(P, true, false, *G, *G_l);
+        utils::invert_edges(P, true, false, *G, *G_c);
+        utils::print_all(*G_l);
+        utils::print_all(*G_c);
+        cost_transform(res_distance, *G_c, *G_c);
         std::cout << "done cost_transform" << std::endl;
         utils::print_all(*G_c);
         std::cout << "Dijkstra" << std::endl;
@@ -330,7 +327,7 @@ EdgeSets ksp::augment(EdgeSets P_l,
         //std::cout << "curr_vertex name: " << (*G)[curr_vertex].name << std::endl;
         curr_vertex = target(p_.back(), g);
     }
-    p_ = utils::translate_edge_set(p_, g_c, g);
+    p_ = utils::translate_edge_set(p_, g_c, g, false);
     P_l_plus_1.push_back(p_);
 
     //std::cout << "setting label=1 on edges:" << std::endl;
@@ -338,12 +335,13 @@ EdgeSets ksp::augment(EdgeSets P_l,
     utils::print_all(g);
     for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
         utils::set_label_to_edges(g, P_l_plus_1[i], -(i+1));
+    utils::set_label_to_edges(g,
+                              utils::translate_edge_set(p_cut, g_c, g, true),
+                              1);
+    std::cout << "GRAPHS AT END OF AUGMENT" << std::endl;
     utils::print_all(g);
-
-
-    //utils::print_all(g_l);
-    //utils::print_all(g_c);
-    //std::cout << "inverting edges on g_l and g_c:" << std::endl;
+    utils::print_all(g_l);
+    utils::print_all(g_c);
     //utils::invert_edges(p_cut, false, false, g_c, g_c);
     //utils::invert_edges(p_cut, false, false, g_l, g_l);
     //utils::print_all(g_l);
