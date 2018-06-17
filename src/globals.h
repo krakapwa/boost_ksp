@@ -2,12 +2,38 @@
 #define GLOBALS_H_
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
+#include <boost/shared_ptr.hpp>
 #include <algorithm>    // std::find
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/bellman_ford_shortest_paths.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+#include <boost/property_map/transform_value_property_map.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/graph/copy.hpp>
+#include <tuple>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;
+namespace logging = boost::log;
 
 using namespace boost;
+
+namespace boost::trivial{
+    enum logSeverityLevel
+    {
+        trace, //5
+        debug, //4
+        info, //3
+        warning, //2
+        error //1
+    };
+}
 
 enum edge_myweight_t { edge_myweight };
 enum edge_label_t { edge_label };

@@ -20,9 +20,9 @@ namespace utils {
     void print_dist_pred(std::vector<double> dist,
                         std::vector<Vertex> preds,
                         const MyGraph & g);
-    VertexPath pred_to_path(std::vector<std::size_t> preds,
-                            const MyGraph & g, Vertex source,
-                            Vertex sink);
+    std::tuple<VertexPath,bool> pred_to_path(std::vector<std::size_t> preds,
+                                            const MyGraph & g, Vertex source,
+                                            Vertex sink);
     void print_path(VertexPath path, const MyGraph & g);
     void print_path(EdgeSet path, const MyGraph & g);
     void print_paths(EdgeSets paths, const MyGraph & g);
@@ -46,7 +46,17 @@ namespace utils {
                       bool inv_algebraic_sign,
                       const MyGraph & g_in,
                       MyGraph & g_out);
+
+    Edge translate_edge(Edge e,
+                           const MyGraph & g_p,
+                           const MyGraph & g,
+                           bool inv_mode=false);
     EdgeSet translate_edge_set(EdgeSet p,
+                               const MyGraph & g_p,
+                               const MyGraph & g,
+                               bool inv_mode);
+
+    EdgeSets translate_edge_sets(EdgeSets P,
                                const MyGraph & g_p,
                                const MyGraph & g,
                                bool inv_mode);
@@ -91,9 +101,15 @@ namespace utils {
                                     Vertex v,
                                     const MyGraph & g);
 
+    int find_ind_edge_starting_with(EdgeSet p,
+                                    int v_id,
+                                    const MyGraph & g);
+
     int find_ind_edge_ending_with(EdgeSet p,
                                   Vertex v,
                                   const MyGraph & g);
+
+    double calc_cost(EdgeSets P, const MyGraph & g);
 
     std::tuple<EdgeSet, EdgeSet, EdgeSet, Edge>
         append_inter(EdgeSet p,
@@ -104,6 +120,8 @@ namespace utils {
                      Vertex sink,
                      const MyGraph & g,
                      const MyGraph & g_c);
+
+    bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g);
 }
 
 #endif

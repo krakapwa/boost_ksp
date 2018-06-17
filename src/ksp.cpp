@@ -37,6 +37,7 @@ BOOST_PYTHON_MODULE(libksp)
                    "label"),
               "docstring add_edge")
     )
+    .def("set_loglevel",&ksp::set_loglevel)
     .def("set_source",&ksp::set_source)
     .def("set_sink",&ksp::set_sink)
     .def("bellman_ford_shortest_paths",&ksp::bellman_ford_shortest_paths)

@@ -19,7 +19,7 @@ IF(NOT CMAKE_BUILD_TYPE)
   #SET(CMAKE_BUILD_TYPE "MINSIZEREL")
 ENDIF()
 
-find_package( Boost 1.58.0 REQUIRED COMPONENTS python3 numpy3)
+find_package( Boost 1.58.0 COMPONENTS python3 numpy3 log REQUIRED )
 message("Include dirs of Boost: " ${Boost_INCLUDE_DIRS} )
 message("Libs of Boost: " ${Boost_LIBRARIES} )
 
@@ -51,6 +51,8 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
 ELSE()
   MESSAGE(FATAL_ERROR "CMakeLists.txt has not been tested/written for your compiler.")
 ENDIF()
+
+ADD_DEFINITIONS("-DBOOST_LOG_DYN_LINK")
 
 find_program(PYTHON "python3")
 

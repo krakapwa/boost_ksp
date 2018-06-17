@@ -29,10 +29,33 @@ void ksp::set_sink(int id, std::string str)
 void ksp::new_graph(int a_n_vertices=0){
 
     n_vertices = a_n_vertices;
-    std::cout << "Creating graph with n_vertices: " <<
-              n_vertices << std::endl;
     G = new MyGraph(n_vertices);
     (*G)[graph_bundle].name = "defaultName";
+    BOOST_LOG_TRIVIAL(info) << "Creating graph with n_vertices: " <<
+        n_vertices;
+
+}
+
+void ksp::set_loglevel(unsigned int a_log_level) {
+
+    using namespace boost::trivial;
+    logSeverityLevel log_level;
+
+    if(a_log_level == 5)
+        log_level = logSeverityLevel::trace;
+    if(a_log_level == 4)
+        log_level = logSeverityLevel::debug;
+    if(a_log_level == 3)
+        log_level = logSeverityLevel::info;
+    if(a_log_level == 2)
+        log_level = logSeverityLevel::debug;
+    if(a_log_level == 1)
+        log_level = logSeverityLevel::error;
+
+    logging::core::get()->set_filter
+        (
+            logging::trivial::severity >= log_level
+        );
 
 }
 
@@ -41,7 +64,7 @@ shared_ptr<ksp> ksp::create() {
     return shared_ptr<ksp>(new ksp);
 }
 
-bool ksp::do_ksp(){
+bp::list ksp::do_ksp(){
 
     //Copy G to G_c and work with latter
 
@@ -64,18 +87,22 @@ bool ksp::do_ksp(){
     EdgeSets P;
 
     //int l_max = std::numeric_limits<int>::max();
-    int l_max = 3;
+    int l_max = 1000;
 
-    std::cout << "Bellman-Ford" << std::endl;
+    BOOST_LOG_TRIVIAL(info) << "Bellman-Ford";
     res = bellman_ford_shortest_paths(*G);
     std::tie(res_path, res_ok, res_distance) = res;
     utils::print_path(res_path, *G);
+
+    if(!res_ok){
+        BOOST_LOG_TRIVIAL(error) << "Couldn't compute a single path!";
+    }
 
     P.push_back(res_path);
 
     for(int l = 1; l < l_max; ++l){
 
-        std::cout << "l: " << l << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "l: " << l;
 
         if(l != 0){
             // Check costs for minima
@@ -83,34 +110,52 @@ bool ksp::do_ksp(){
 
         for(unsigned int i=0; i<P.size(); ++i)
             utils::set_label_on_path(P[i], -(i+1), *G);
+        BOOST_LOG_TRIVIAL(info) << "setting labels on past solutions";
 
-        utils::invert_edges(P, true, false, *G, *G_l);
-        utils::invert_edges(P, true, false, *G, *G_c);
-        utils::print_all(*G_l);
-        utils::print_all(*G_c);
+        utils::invert_edges(P,
+                            false,
+                            false,
+                            *G,
+                            *G_l);
+        utils::invert_edges(P,
+                            false,
+                            false,
+                            *G,
+                            *G_c);
+        BOOST_LOG_TRIVIAL(info) << "inverted edges on g_l and g_c";
+        //utils::print_all(*G_l);
+        //utils::print_all(*G_c);
         cost_transform(res_distance, *G_c, *G_c);
-        std::cout << "done cost_transform" << std::endl;
-        utils::print_all(*G_c);
-        std::cout << "Dijkstra" << std::endl;
-        res = dijkstra_shortest_paths(*G_c);
+        BOOST_LOG_TRIVIAL(info) << "done cost_transform";
+        //utils::print_all(*G_c);
+        BOOST_LOG_TRIVIAL(info) << "Dijkstra";
+        res = dijkstra_shortest_paths(*G_c, (*G)[sink_vertex].id);
         std::tie(res_path, res_ok, res_distance) = res;
-        utils::print_path(res_path, *G);
-        std::cout << "Augment" << std::endl;
+        //utils::print_path(res_path, *G);
 
-        P = augment(P,
-                    res_path,
-                    *G,
-                    *G_c,
-                    *G_l);
-        std::cout << "Solution at l= "<< l << std::endl;
-        utils::print_paths(P, *G);
-        utils::print_all(*G);
+        if(res_ok){
+            BOOST_LOG_TRIVIAL(info) << "l: " << l
+                                    << ", cost: " << utils::calc_cost(P, *G);
 
+            BOOST_LOG_TRIVIAL(info) << "Augmenting";
+            P = augment(P,
+                        res_path,
+                        *G,
+                        *G_c,
+                        *G_l);
+        }
+        else{
+            BOOST_LOG_TRIVIAL(info) << "Stopped at l= " << l;
+
+            return utils::edgeSets_to_list(P,
+                                           *G);
+
+        }
     }
-    return true;
+    return bp::list();
 }
 
-ShortestPathRes ksp::dijkstra_shortest_paths(const MyGraph & g){
+ShortestPathRes ksp::dijkstra_shortest_paths(const MyGraph & g, int sink_id){
 
     EdgeSet out_path;
     ShortestPathRes out;
@@ -122,7 +167,6 @@ ShortestPathRes ksp::dijkstra_shortest_paths(const MyGraph & g){
 
     // call to the algorithm
     //bool r = boost::dijkstra_shortest_paths(
-    bool r = true;
     boost::dijkstra_shortest_paths(
         g,
         source_vertex,
@@ -133,18 +177,23 @@ ShortestPathRes ksp::dijkstra_shortest_paths(const MyGraph & g){
                                                           get(vertex_index,g)))
         );
 
+    //print_distances(distance, *G);
 
-    if (r){
-        //print_distances(distance, *G);
-        VertexPath shortest = utils::pred_to_path(predecessors, g,
-                                           source_vertex, sink_vertex);
-        //print_path(shortest, *G);
-        out_path = utils::vertpath_to_edgepath(shortest, g);
+    VertexPath shortest;
+    bool r;
 
+    std::tie(shortest, r) = utils::pred_to_path(predecessors, g,
+                                                source_vertex, sink_vertex);
+
+    if(!r){
+        BOOST_LOG_TRIVIAL(info) << "Dijkstra couldn't reach sink node";
+        out_path = EdgeSet();
+        r = false;
     }
     else{
-        std::cout << "negative cycle" << std::endl;
-        out_path = EdgeSet();
+        out_path = utils::vertpath_to_edgepath(shortest, g);
+        utils::print_path(out_path, g);
+        r = true;
     }
 
     out = std::make_tuple(out_path, r, distances);
@@ -180,16 +229,17 @@ ShortestPathRes  ksp::bellman_ford_shortest_paths(const MyGraph & g){
                                                    v_index))
         );
 
+    VertexPath shortest;
+
     if (r){
-        //print_dist_pred(distances, predecessors, *G);
-
-        VertexPath shortest = utils::pred_to_path(predecessors, g,
-                                           source_vertex, sink_vertex);
+        std::tie(shortest, std::ignore) = utils::pred_to_path(predecessors,
+                                                              g,
+                                                              source_vertex,
+                                                              sink_vertex);
         out_path = utils::vertpath_to_edgepath(shortest, g);
-
     }
     else{
-        std::cout << "negative cycle" << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "negative cycle";
         out_path = EdgeSet();
     }
 
@@ -230,12 +280,9 @@ EdgeSets ksp::augment(EdgeSets P_l,
 
     //Populate p_cut.
     for(unsigned int i=0; i < p_inter.size(); ++i){
-        v_in = source(p_inter[i], g);
-        v_out = target(p_inter[i], g);
+        v_in = source(p_inter[i], g_c);
+        v_out = target(p_inter[i], g_c);
         if(!edge(v_in, v_out, g).second){
-            std::cout << "cut at edge: ("  <<
-                g[v_in].name << "," <<
-                g[v_out].name << ")" << std::endl;
             p_cut.push_back(p_inter[i]);
         }
     }
@@ -244,9 +291,8 @@ EdgeSets ksp::augment(EdgeSets P_l,
     for(unsigned int i=0; i < p_cut.size(); ++i)
         p_inter = utils::remove_edge_from_set(p_cut[i],
                                         p_inter,
-                                       g,
+                                       g_c,
                                        false);
-    std::cout << "removed edges of p_cut from p_inter" << std::endl;
 
     //Loop over P_l and remove edges belonging to p_cut
     EdgeSet leftovers;
@@ -257,10 +303,9 @@ EdgeSets ksp::augment(EdgeSets P_l,
         int ind_edge = 0;
         Edge curr_edge = p[ind_edge];
         while(target(curr_edge, g) != sink_vertex){
-            utils::print_edge(curr_edge, g);
+            //utils::print_edge(curr_edge, g);
             //print_path(p_cut, *G);
             if(utils::edge_is_in_set(curr_edge, p_cut, g, g_c, true)){
-                std::cout << "edge is in p_cut" << std::endl;
                 p = utils::remove_edge_from_set(curr_edge,
                                          p,
                                          g,
@@ -274,12 +319,6 @@ EdgeSets ksp::augment(EdgeSets P_l,
                                                  g,
                                                  g_c);
                 std::tie(p, p_inter, leftovers, curr_edge) = res_append;
-                std::cout << "p" << std::endl;
-                utils::print_path(p, g);
-                std::cout << "p_inter" << std::endl;
-                utils::print_path(p_inter, g);
-                std::cout << "leftovers" << std::endl;
-                utils::print_path(leftovers, g);
             }
             else{
                 ind_edge += 1;
@@ -289,59 +328,106 @@ EdgeSets ksp::augment(EdgeSets P_l,
         P_l_plus_1.push_back(p);
     }
 
+    // Need to invert order of P_l_plus_1
+    std::reverse(P_l_plus_1.begin(), P_l_plus_1.end());
+
     // p_cut are re-established on g_c
     utils::invert_edges(p_cut, true, true, g_c, g_c);
     utils::invert_edges(p_cut, true, true, g_l, g_l);
 
-    // Need to invert order of P_l_plus_1
-    std::reverse(P_l_plus_1.begin(), P_l_plus_1.end());
 
     // build added path p_ from p_inter and leftovers
     EdgeSet p_;
     MyGraph::out_edge_iterator ei, ei_end;
     Edge e = p_inter[0];
     e = edge(source(e, g_c), target(e, g_c) , g).first;
-    p_.push_back(e);
+    p_.push_back(utils::translate_edge(e, g_c, g, false));
     Vertex curr_vertex = target(p_[0], g);
-    int ind;
+    int curr_vertex_id = g[curr_vertex].id;
+    int ind_inter;
+    int ind_leftover;
+    bool got_self = false;
+    bool got_inter = false;
+    bool got_leftover = false;
+    //utils::print_path(p_, g);
+    label_p -= 1;
     while(true){
-        if(g[curr_vertex].id == g[sink_vertex].id)
+        if(curr_vertex_id == g[sink_vertex].id)
             break;
+
         // Search in p_inter for next edge
-        ind = utils::find_ind_edge_starting_with(p_inter,
-                                                 curr_vertex,
-                                                 g);
-        if(ind == -1){ // Search in leftovers
-            for (boost::tie(ei, ei_end) = out_edges(curr_vertex, g);
-                ei != ei_end; ++ei) {
-                e = edge(source(*ei, g_c),
-                         target(*ei, g_c) , g).first;
-                 if(g[e].label == label_p){
-                    p_.push_back(*ei);
-                    break;
-                }
+        ind_inter = utils::find_ind_edge_starting_with(p_inter,
+                                                       curr_vertex_id,
+                                                       g_c);
+        ind_leftover = utils::find_ind_edge_starting_with(leftovers,
+                                                          curr_vertex_id,
+                                                          g_c);
+        // Check first if we can merge back to myself
+        got_self = false;
+        got_inter = false;
+        got_leftover = false;
+
+        for (boost::tie(ei, ei_end) = out_edges(curr_vertex, g);
+            ei != ei_end; ++ei) {
+            e = edge(source(*ei, g),
+                        target(*ei, g) , g).first;
+            if(g[e].label == label_p){
+                p_.push_back(*ei);
+                got_self = true;
+                //utils::print_path(p_, g);
+                curr_vertex = target(p_.back(), g);
+                curr_vertex_id = g[curr_vertex].id;
+                break;
             }
         }
-        else
-            p_.push_back(p_inter[ind]);
-        //std::cout << "curr_vertex name: " << (*G)[curr_vertex].name << std::endl;
-        curr_vertex = target(p_.back(), g);
+        if(ind_inter != -1 && !got_self){ // Add edge from p_inter
+            e = utils::translate_edge(p_inter[ind_inter],
+                                               g_c,
+                                               g,
+                                               false);
+            p_.push_back(e);
+            got_inter = true;
+            e = utils::translate_edge(e,
+                                      g,
+                                      g_c,
+                                      false);
+            p_inter = utils::remove_edge_from_set(e, p_inter, g_c, false);
+            //utils::print_path(p_inter, g_c);
+            //utils::print_path(p_, g);
+            curr_vertex = target(p_.back(), g);
+            curr_vertex_id = g[curr_vertex].id;
+        }
+        if(ind_leftover != -1 && !got_self){ // Add edge from p_inter
+            e = utils::translate_edge(leftovers[ind_leftover],
+                                               g_c,
+                                               g,
+                                               false);
+            p_.push_back(e);
+            got_leftover = true;
+            leftovers = utils::remove_edge_from_set(e, leftovers, g_c, false);
+            //utils::print_path(leftovers, g_c);
+            //utils::print_path(p_, g);
+            curr_vertex = target(p_.back(), g);
+            curr_vertex_id = g[curr_vertex].id;
+        }
+        if(got_self+ got_inter + got_leftover == 0)
+            break;
     }
-    p_ = utils::translate_edge_set(p_, g_c, g, false);
+
+    BOOST_LOG_TRIVIAL(info) << "done build p_";
+    //p_ = utils::translate_edge_set(p_, g_c, g, false);
     P_l_plus_1.push_back(p_);
 
-    //std::cout << "setting label=1 on edges:" << std::endl;
     //utils::set_label_to_all(g, 1);
-    utils::print_all(g);
+    //utils::print_all(g);
     for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
         utils::set_label_to_edges(g, P_l_plus_1[i], -(i+1));
     utils::set_label_to_edges(g,
                               utils::translate_edge_set(p_cut, g_c, g, true),
                               1);
-    std::cout << "GRAPHS AT END OF AUGMENT" << std::endl;
-    utils::print_all(g);
-    utils::print_all(g_l);
-    utils::print_all(g_c);
+    //utils::print_all(g);
+    //utils::print_all(g_l);
+    //utils::print_all(g_c);
     //utils::invert_edges(p_cut, false, false, g_c, g_c);
     //utils::invert_edges(p_cut, false, false, g_l, g_l);
     //utils::print_all(g_l);
