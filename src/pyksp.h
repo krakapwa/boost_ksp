@@ -40,6 +40,9 @@ struct ksp {
     Vertex source_vertex;
     Vertex sink_vertex;
 
+    double cost;
+    double new_cost; // will store two consecutives costs for comparison
+
 
     static shared_ptr<ksp> create();
     void new_graph(int n_vertices);
@@ -55,15 +58,14 @@ struct ksp {
                      std::string str_0="",
                      std::string str_1="",
                      int label=1);
-    EdgeSets augment(EdgeSets P_l,
-                     EdgeSet p_inter,
-                     MyGraph & g,
-                     MyGraph & g_c,
-                     MyGraph & g_l);
     void set_source(int id, std::string str);
     void set_sink(int id, std::string str);
-    ShortestPathRes bellman_ford_shortest_paths(const MyGraph & g);
-    ShortestPathRes dijkstra_shortest_paths(const MyGraph & g, int sink_id);
+
+    std::tuple<EdgeSet, bool, std::vector<double>>
+    bellman_ford_shortest_paths(const MyGraph & g);
+
+    std::tuple<EdgeSet, bool, std::vector<double>>
+    dijkstra_shortest_paths(const MyGraph & g, int sink_id);
 
     void cost_transform(const std::vector<double> & distance,
                         const MyGraph & g_in, MyGraph & g_out);

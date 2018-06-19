@@ -16,3 +16,7 @@ make install
 ```
 
 The install command runs pip install -e
+
+## Usage
+
+Read/execute the `demo.py` file.

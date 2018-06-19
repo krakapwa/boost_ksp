@@ -25,7 +25,7 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include <boost/shared_ptr.hpp>
-#include <algorithm>    // std::find
+#include <algorithm>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/bellman_ford_shortest_paths.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -94,12 +94,274 @@ typedef adjacency_list<vecS, vecS, bidirectionalS,
     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
-typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
 typedef graph_traits<MyGraph>::edge_descriptor Edge;
 typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > VertexPath;
-typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeSet;
-typedef std::vector<EdgeSet> EdgeSets;
+
+
 typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
-typedef std::tuple<EdgeSet, bool, std::vector<double>> ShortestPathRes;
+typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeVec;
+typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
+
+
+struct EdgeSet{
+    EdgeVec edges;
+    const MyGraph * g;
+    using iterator = EdgeVec::iterator;
+
+    // Default constructor. Must assign a graph!
+    EdgeSet(const MyGraph & a_g){
+        g = &a_g;
+    }
+
+    EdgeSet& operator+=(const EdgeSet & p) {
+
+        edges.insert(edges.end(),
+                     p.edges.begin(),
+                     p.edges.end());
+
+        return *this;
+    }
+
+
+    EdgeSet& operator+=(const Edge & e) {
+
+        this->edges.push_back(e);
+
+        return *this;
+    }
+
+    Edge& operator[](const int & i) {
+
+        return edges[i];
+    }
+
+    void operator=(EdgeVec & new_e) {
+
+        edges = new_e;
+    }
+
+    unsigned int size(){
+        return edges.size();
+    }
+
+    Edge back(){
+        return edges.back();
+    }
+
+    iterator begin(){
+        return edges.begin();
+    }
+
+    iterator end(){
+        return edges.end();
+    }
+
+    EdgeSet & insert(EdgeSet & p, const int & ind){
+
+        for (unsigned int i=0; i<p.size(); ++i)
+            edges.insert(edges.begin() + ind + i, p[i]);
+
+        return *this;
+    }
+
+    EdgeSet & remove_edge(const Edge & e){
+        Vertex curr_u;
+        Vertex curr_v;
+
+        Vertex u = source(e, *g);
+        Vertex v = target(e, *g);
+
+        for(unsigned int i = 0; i < this->size(); ++i){
+            curr_u = source(this->edges[i], *g);
+            curr_v = target(this->edges[i], *g);
+            if(((*g)[curr_u].id == (*g)[u].id)
+               && ((*g)[curr_v].id == (*g)[v].id)){
+                this->edges.erase(this->edges.begin() + i);
+                break;
+            }
+        }
+
+        return *this;
+    }
+
+    EdgeSet & remove_edge(const Vertex & u, const Vertex & v){
+        Vertex curr_u;
+        Vertex curr_v;
+
+        for(unsigned int i = 0; i < this->size(); ++i){
+            curr_u = source(this->edges[i], *g);
+            curr_v = target(this->edges[i], *g);
+            if(((*g)[curr_u].id == (*g)[u].id)
+               && ((*g)[curr_v].id == (*g)[v].id)){
+                this->edges.erase(this->edges.begin() + i);
+                break;
+            }
+        }
+
+        return *this;
+    }
+
+    Edge next(const Edge & e){
+
+        unsigned int ind_e;
+        Vertex u, v;
+        u = source(e, *g);
+        v = target(e, *g);
+        Vertex curr_u, curr_v;
+
+        for(unsigned int i = 0; i < size(); ++i){
+            curr_u = source(edges[i], *g);
+            curr_v = target(edges[i], *g);
+
+            if((*g)[curr_u].id == (*g)[u].id &&
+               (*g)[curr_v].id == (*g)[v].id){
+                ind_e = i;
+                break;
+            }
+        }
+
+        if(ind_e > size()-1) // we got last edge, return first edge
+            return edges[0];
+        else
+            return edges[ind_e+1];
+    }
+
+    bool are_contiguous(const Edge & e0, const Edge & e1){
+
+        Vertex u, v;
+        v = target(e0, *g);
+        u = source(e1, *g);
+        if((*g)[u].id == (*g)[v].id)
+            return true;
+        else
+            return false;
+    }
+
+    int is_discontinuous(){
+
+        Vertex u, v;
+
+        for(unsigned int i = 0; i < size()-1; ++i){
+            u = target(edges[i], *g);
+            v = source(edges[i+1], *g);
+            if((*g)[u].id != (*g)[v].id)
+                return i+1;
+        }
+        return -1;
+    }
+
+    bool is_contiguous_after(const Edge & e){
+
+        Edge e_next = next(e);
+        Vertex u, v;
+        v = target(e, *g);
+        u = source(e_next, *g);
+        if((*g)[u].id == (*g)[v].id)
+            return true;
+        else
+            return false;
+    }
+
+    bool has_vertex(const Vertex & u){
+
+        EdgeSet::iterator it;
+        int curr_u_id;
+        int curr_v_id;
+
+        for (it=begin(); it != end(); ++it) {
+            curr_u_id = ((*g)[source(*it, *g)]).id;
+            curr_v_id = ((*g)[target(*it, *g)]).id;
+            if((curr_u_id == (*(this->g))[u].id) ||
+               (curr_v_id == (*(this->g))[u].id))
+                return true;
+        }
+
+        return false;
+
+    }
+
+    bool has_edge(const Edge & e){
+
+        EdgeSet::iterator it;
+        int u_id = (*g)[source(e, *g)].id;
+        int v_id = (*g)[target(e, *g)].id;
+        int curr_u_id;
+        int curr_v_id;
+
+        for (it=begin(); it != end(); ++it) {
+            curr_u_id = ((*g)[source(*it, *g)]).id;
+            curr_v_id = ((*g)[target(*it, *g)]).id;
+            if((curr_u_id == u_id) &&
+               (curr_v_id == v_id))
+                return true;
+        }
+        return false;
+
+    }
+
+    EdgeSet convert_to_graph(const MyGraph & new_g){
+
+        EdgeSet p_valid(new_g);
+        EdgeSet p_invalid(*g);
+        std::pair<Edge,bool> e;
+
+        Vertex u, v;
+
+        for(unsigned int i=0; i<edges.size(); ++i){
+            u = source(edges[i], *g);
+            v = target(edges[i], *g);
+            e = edge(u, v, new_g);
+            if(e.second)
+                p_valid += e.first;
+            else
+                p_invalid += edges[i];
+        }
+
+        g = &new_g;
+        edges = p_valid.edges;
+
+        return p_invalid;
+
+    }
+
+
+    std::pair<Edge,bool> convert_edge(Edge e,
+                                      const MyGraph & g_p,
+                                      bool inv_mode){
+        std::pair<Edge, bool> e_out;
+        if(inv_mode)
+            e_out = edge(target(e, g_p), source(e, g_p), *g);
+        else
+            e_out = edge(source(e, g_p), target(e, g_p), *g);
+
+        return e_out;
+    }
+
+};
+
+// This appends two sets
+inline EdgeSet operator+(const EdgeSet & p0, const EdgeSet & p1) {
+
+    EdgeSet p_out(*(p0.g));
+    p_out += p0;
+    p_out += p1;
+
+    return p_out;
+}
+
+inline EdgeSet operator-(const EdgeSet & p0, EdgeSet & p1) {
+
+    EdgeSet p_out(*(p0.g));
+    p_out += p0;
+    for(unsigned int i=0; i<p1.size(); ++i){
+        if(!p_out.has_edge(p1[i]))
+            p_out += p1[i];
+    }
+
+    return p_out;
+}
+
+typedef std::vector<EdgeSet> EdgeSets;
+
 #endif

@@ -10,6 +10,7 @@ nodes = {'a': source_ind,
 inv_nodes = {v: k for k, v in nodes.items()}
 
 g = libksp.ksp.create()
+g.set_loglevel(3)
 g.new_graph(0)
 
 edges = list()

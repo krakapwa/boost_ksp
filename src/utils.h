@@ -51,35 +51,25 @@ namespace utils {
     void invert_edge(Edge e,
                      bool inv_label,
                      bool inv_algebraic_sign,
-                     const MyGraph & g_in,
-                     MyGraph & g_out);
+                     MyGraph & g);
 
     void invert_edges(EdgeSet edge_path,
                       bool inv_label,
                       bool inv_algebraic_sign,
-                      const MyGraph & g_in,
-                      MyGraph & g_out);
+                      MyGraph & g);
 
 
     void invert_edges(EdgeSets edge_sets,
                       bool inv_label,
                       bool inv_algebraic_sign,
-                      const MyGraph & g_in,
-                      MyGraph & g_out);
-
-    Edge translate_edge(Edge e,
-                           const MyGraph & g_p,
-                           const MyGraph & g,
-                           bool inv_mode=false);
-    EdgeSet translate_edge_set(EdgeSet p,
-                               const MyGraph & g_p,
-                               const MyGraph & g,
-                               bool inv_mode);
+                      MyGraph & g);
 
     EdgeSets translate_edge_sets(EdgeSets P,
-                               const MyGraph & g_p,
-                               const MyGraph & g,
-                               bool inv_mode);
+                                const MyGraph & g);
+
+    Edge translate_edge(Edge e,
+                        const MyGraph & g_p,
+                        const MyGraph & g);
 
     EdgeSet vertpath_to_edgepath(VertexPath path, const MyGraph & g);
 
@@ -99,12 +89,14 @@ namespace utils {
                           const MyGraph & g);
 
     EdgeSet get_edges_from_label(const MyGraph & g, int label);
-    void set_label_to_edges(MyGraph & g, EdgeSet es, int label);
 
+    void set_label_to_invalid_edges(EdgeSet e_in,
+                                    MyGraph & g_in,
+                                    MyGraph & g_out,
+                                    int label,
+                                    bool invert);
     void set_label_to_all(MyGraph & g, int label);
-    void set_label_on_path(EdgeSet p,
-                           int label,
-                           MyGraph & g);
+    void set_label(EdgeSet p, MyGraph & g, int label);
 
     EdgeSet remove_edge_from_set(Edge e,
                                  EdgeSet p,
@@ -131,17 +123,27 @@ namespace utils {
 
     double calc_cost(EdgeSets P, const MyGraph & g);
 
-    std::tuple<EdgeSet, EdgeSet, EdgeSet, Edge>
-        append_inter(EdgeSet p,
-                     EdgeSet p_inter,
-                     EdgeSet p_cut,
-                     EdgeSet leftovers,
-                     Vertex start,
-                     Vertex sink,
-                     const MyGraph & g,
-                     const MyGraph & g_c);
+    EdgeSet append_inter(EdgeSet p,
+                         EdgeSet p_inter,
+                         Vertex start,
+                         Vertex sink,
+                         const MyGraph & g);
+
+    EdgeSet build_p_from_self_or_store(Edge start_edge,
+                                           EdgeSet store,
+                                           int label_p,
+                                           Vertex sink_vertex,
+                                           const MyGraph & g);
 
     bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g);
+
+    EdgeSets augment(EdgeSets P_l,
+                     EdgeSet p_inter,
+                     Vertex sink_vertex,
+                     MyGraph & g,
+                     MyGraph & g_c,
+                     MyGraph & g_l);
+
 }
 
 #endif

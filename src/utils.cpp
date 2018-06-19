@@ -21,24 +21,22 @@
 #include "utils.h"
 
 namespace utils{
+    // This passes through all vertices before adding (overhead).
     Vertex add_vertex(MyGraph & g, int id, std::string str){
-        // This passes through all vertices (overhead).
+
 
         std::pair<VertexIter, VertexIter> vp;
         for (vp = vertices(g); vp.first != vp.second; ++vp.first)
             if(g[*(vp.first)].id == id){
-                //std::cout << "vertex was already there, id: " <<
-                //    (*G)[*(vp.first)].id << std::endl;
-
+                //vertex was already there
                 return *(vp.first);
             }
 
-        //std::cout << "added new vertex" << std::endl;
+        // addnew vertex
         Vertex res = boost::add_vertex(g);
         g[res].name = str;
         g[res].id = id;
 
-        //std::cout << "num_vertices: " << num_vertices(*G) << std::endl;
         return res;
     }
 
@@ -66,17 +64,18 @@ namespace utils{
         return true;
     }
 
+    // Converts from predecessor map to vector of edge descriptors
     std::tuple<VertexPath,bool> pred_to_path(std::vector<std::size_t> preds,
                             const MyGraph & g,
                             Vertex source,
                             Vertex sink){
+
         auto v_index = get(boost::vertex_index, g);
 
         VertexPath path;
         Vertex current = sink;
         Vertex last;
         bool ok = true;
-
 
         path.push_back(current);
 
@@ -111,38 +110,51 @@ namespace utils{
     }
 
     void print_edge(Edge e, const MyGraph & g){
-
-        std::cout << "(" << g[source(e, g)].name << "," <<
-            g[target(e, g)].name << ") ";
+        BOOST_LOG_TRIVIAL(info) << "(" << g[source(e, g)].name
+                                 << ","
+                                 << g[target(e, g)].name << ") ";
     }
+
     void print_path(EdgeSet path, const MyGraph & g){
 
         for(unsigned int i = 0; i < path.size(); ++i){
             print_edge(path[i], g);
         }
-        std::cout << std::endl;
     }
 
     void print_paths(EdgeSets paths, const MyGraph & g){
 
         for(unsigned int i = 0; i < paths.size(); ++i){
-            std::cout << "path " << i << std::endl;
+            BOOST_LOG_TRIVIAL(info) << "path #" << i;
             print_path(paths[i], g);
         }
-        std::cout << std::endl;
     }
 
     EdgeSet get_edges_from_label(const MyGraph & g, int label){
         EdgeIter ei, ei_end;
-        EdgeSet out;
+        EdgeSet out(g);
 
         for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
             if(g[*ei].label == label)
-                out.push_back(*ei);
+                out += *ei;
         }
         return out;
     }
 
+    void set_label(EdgeSet p, MyGraph & g, int label){
+
+        EdgeSet::iterator it;
+        for (it=p.begin(); it != p.end(); ++it) {
+            g[*it].label = label;
+        }
+    }
+
+    void set_label(Edge e, MyGraph & g, int label){
+
+        g[e].label = label;
+    }
+
+    // Assigns a label to all edges
     void set_label_to_all(MyGraph & g, int label){
 
         EdgeIter ei, ei_end;
@@ -152,28 +164,45 @@ namespace utils{
         }
     }
 
+    // Assigns a label to edges that are invalid
+    void set_label_to_invalid_edges(EdgeSet e_in,
+                                    MyGraph & g_in,
+                                    MyGraph & g_out,
+                                    int label,
+                                    bool invert){
+
+        Vertex u;
+        Vertex v;
+
+        for(unsigned int i=0; i<e_in.size(); ++i){
+            if(invert){
+                u = target(e_in[i], g_in);
+                v = source(e_in[i], g_in);
+            }
+            else{
+                u = source(e_in[i], g_in);
+                v = target(e_in[i], g_in);
+            }
+
+            g_out[edge(u,v, g_out).first].label = label;
+        }
+    }
+
+    // Assigns a label to edges
     void set_label_to_edges(MyGraph & g, EdgeSet es, int label){
 
         for(unsigned int i=0; i<es.size(); ++i){
-            //std::cout << "setting label " << label <<
-            //    " to edge";
-            //print_edge(es[i], g);
-            //std::cout << std::endl;
             g[es[i]].label = label;
-
-            //std::cout << " edge";
-            //print_edge(es[i], g);
-            //std::cout << " label: " << g[es[i]].label << std::endl;
         }
-        //utils::print_all(g);
     }
 
+    // Print the whole graph with node/edges ids, weights and labels
     void print_all(const MyGraph & g){
 
-        std::cout << "------ graph: " << g[graph_bundle].name <<
-            " --------" << std::endl;
-        std::cout << "------ edges " << " (n_edges: "
-                << num_edges(g) << ") --------" << std::endl;
+        BOOST_LOG_TRIVIAL(trace) << "------ graph: " << g[graph_bundle].name <<
+            " --------";
+        BOOST_LOG_TRIVIAL(trace) << "------ edges " << " (n_edges: "
+                << num_edges(g) << ") --------";
         EdgeIter ei, ei_end;
         MyGraph::vertex_descriptor v_in;
         MyGraph::vertex_descriptor v_out;
@@ -181,36 +210,39 @@ namespace utils{
         for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
             v_in = source(*ei, g);
             v_out = target(*ei, g);
-            std::cout << "edge: (" << g[v_in].id << "," <<
+            BOOST_LOG_TRIVIAL(trace) << "edge: (" << g[v_in].id << "," <<
                 g[v_out].id << ") / (" << g[v_in].name << "," << g[v_out].name <<
                 ") , id: " << g[*ei].id <<
                 ", label: " << g[*ei].label <<
-                ", weight: " << g[*ei].weight << std::endl;
+                ", weight: " << g[*ei].weight;
         }
 
-        std::cout << "------ vertices" << " (n_vertices: "
-                << num_vertices(g) << ") --------" << std::endl;
+        BOOST_LOG_TRIVIAL(trace) << "------ vertices" << " (n_vertices: "
+                << num_vertices(g) << ") --------";
         std::pair<VertexIter, VertexIter> vp;
         for (vp = vertices(g); vp.first != vp.second; ++vp.first)
-            std::cout << "vertex: " << g[*vp.first].id << ", name: " <<
-                g[*vp.first].name << std::endl;
-        std::cout << "--------------" << std::endl;
+            BOOST_LOG_TRIVIAL(trace) << "vertex: "
+                                    << g[*vp.first].id
+                                    << ", name: "
+                                    << g[*vp.first].name;
+        BOOST_LOG_TRIVIAL(trace) << "--------------";
 
     }
 
+    // Converts from vertex to edge
     EdgeSet vertpath_to_edgepath(VertexPath path, const MyGraph & g){
-        EdgeSet ep;
+        EdgeSet ep(g);
         std::pair<Edge, bool> e_tmp;
 
         VertexPath::reverse_iterator it;
         for (it=path.rbegin(); it != path.rend()-1; ++it) {
-            //std::cout << "u, v: " << *it << "," << *std::next(it) << std::endl;
             e_tmp = edge(*it, *std::next(it), g);
-            ep.push_back(e_tmp.first);
+            ep += e_tmp.first;
         }
         return ep;
     }
 
+    // To test Bellman-Ford and Dijkstra results
     void print_dist_pred(std::vector<double> distances,
                         std::vector<Vertex> predecessors,
                         const MyGraph & g){
@@ -284,69 +316,6 @@ namespace utils{
         return false;
     }
 
-    EdgeSet remove_edge_from_set(Vertex v_in,
-                                 Vertex v_out,
-                                 EdgeSet p,
-                                 const MyGraph & g,
-                                 bool inv_edge=false){
-
-        Vertex curr_v_in;
-        Vertex curr_v_out;
-
-        Vertex v_tmp;
-
-        if(inv_edge){
-            v_tmp = v_out;
-            v_out = v_in;
-            v_in = v_tmp;
-        }
-
-        for(unsigned int i = 0; i < p.size(); ++i){
-            curr_v_in = source(p[i], g);
-            curr_v_out = target(p[i], g);
-            if((g[curr_v_in].id == g[v_in].id) &&
-               (g[curr_v_out].id == g[v_out].id)){
-                //std::cout << "removing edge #" << i << std::endl;
-                p.erase(p.begin() + i);
-                break;
-            }
-        }
-
-        return p;
-    }
-
-    EdgeSet remove_edge_from_set(Edge e,
-                                 EdgeSet p,
-                                 const MyGraph & g,
-                                 bool inv_edge=false){
-
-        Vertex curr_v_in;
-        Vertex curr_v_out;
-
-        Vertex v_in;
-        Vertex v_out;
-
-        if(inv_edge){
-            v_in = target(e, g);
-            v_out = source(e, g);
-        }
-        else{
-            v_in = source(e, g);
-            v_out = target(e, g);
-        }
-
-        for(unsigned int i = 0; i < p.size(); ++i){
-            curr_v_in = source(p[i], g);
-            curr_v_out = target(p[i], g);
-            if((g[curr_v_in].id == g[v_in].id) && (g[curr_v_out].id == g[v_out].id)){
-                //std::cout << "removing edge #" << i << std::endl;
-                p.erase(p.begin() + i);
-                break;
-            }
-        }
-
-        return p;
-    }
     int find_ind_edge_ending_with(EdgeSet p,
                                 Vertex v,
                                 const MyGraph & g){
@@ -363,13 +332,7 @@ namespace utils{
                                     int v_id,
                                     const MyGraph & g){
 
-        //std::cout << "size: " << p.size() << std::endl;
         for(unsigned int i=0; i < p.size(); ++i){
-            //std::cout << "curr_id, v_id: "
-            //          << g[source(p[i], g)].id
-            //          << ", "
-            //          << v_id
-            //          << std::endl;
             if(g[source(p[i], g)].id == v_id){
                 return i;
             }
@@ -384,7 +347,6 @@ namespace utils{
 
         for(unsigned int i=0; i < p.size(); ++i){
             if(g[source(p[i], g)].id == g[v].id){
-                //std:: cout << i << std::endl;
                 return i;
             }
         }
@@ -392,21 +354,19 @@ namespace utils{
         return -1;
     }
 
-    std::tuple<EdgeSet, EdgeSet, EdgeSet, Edge>
-    append_inter(EdgeSet p,
-                 EdgeSet p_inter,
-                 EdgeSet p_cut,
-                 EdgeSet leftovers,
-                 Vertex start,
-                 Vertex sink,
-                 const MyGraph & g,
-                 const MyGraph & g_c){
+    // This function is called when interlacing occurs.
+    // One or several edges of p_inter are appended to p.
+    EdgeSet append_inter(EdgeSet p,
+                         EdgeSet p_inter,
+                         Vertex start,
+                         Vertex sink,
+                         const MyGraph & g){
 
-        // Find label of path p (edge is inverted)
+        // Find label of path p
         int label_p = g[p[0]].label;
 
         // Find index of start in p_inter
-        EdgeSet to_append;
+        EdgeSet to_append(g);
         int ind_start = find_ind_edge_starting_with(p_inter, start, g);
 
         Edge curr_edge = p_inter[ind_start];
@@ -415,151 +375,62 @@ namespace utils{
         // (1) sink is reached
         // (2) target of edge is not part of p (based on label)
         // (3) p_inter is "broken"
-        //print_path(p, g);
-        //print_all(g);
-        //std::cout << "label_stop: " << label_p << std::endl;
         while(true){
-            to_append.push_back(edge(source(curr_edge, g_c),
-                                     target(curr_edge, g_c), g).first);
+            to_append += curr_edge;
             if(g[target(curr_edge, g)].id == g[sink].id)
                 break;
             if(g[curr_edge].label == label_p)
                 break;
             if(g[p_inter[ind_start]].id_vertex_out !=
-               g[p_inter[ind_start+1]].id_vertex_in)
+               g[p_inter.next(curr_edge)].id_vertex_in)
                 break;
             ind_start += 1;
             curr_edge = p_inter[ind_start];
         }
 
-        std::cout << "to_append: " << std::endl;
-        print_path(to_append, g);
-        // Remove edges of to_append from p_inter
-        for(unsigned int i=0; i<to_append.size(); ++i)
-            p_inter = remove_edge_from_set(to_append[i], p_inter, g);
-
-        // Fetch edges that are "left overs", i.e. interlacing path passed over
-        // approach: from vertex target(curr_edge),
-        // pass through edges labeled label_p
-        // until we find no out_edges with label label_p
-        Vertex start_vertex = target(curr_edge, g);
-        bool found_a_leftover = true;
-
-        //std::cout << "before leftover appending" << std::endl;
-        //std::cout << "p" << std::endl;
-        //print_path(p, g);
-        //print_all(g);
-        //print_all(g_c);
-        //std::cout << "---------p_cut-------------" << std::endl;
-        //print_path(p_cut, g_c);
-        //print_all(g);
-
-        MyGraph::in_edge_iterator ei, ei_end;
-        while(found_a_leftover){
-            found_a_leftover = false;
-            for (boost::tie(ei, ei_end) = in_edges(start_vertex, g);
-                ei != ei_end; ++ei) {
-
-                if((g[*ei].label == label_p) &&
-                    !edge_is_in_set(*ei, p_cut, g, g_c, true)){
-
-                    found_a_leftover = true;
-                    start_vertex = source(*ei, g);
-                    leftovers.push_back(*ei);
-                    //std::cout << "Leftovers. Appended edge ("
-                    //        << g[source(*ei, g)].name <<  ","
-                    //        << g[target(*ei, g)].name <<  ")"
-                    //        << std::endl;
-                }
-            }
-        }
-        //std::cout << "leftovers: " << std::endl;
-        //print_path(leftovers, g);
-
-        // append to_append to p
-
-        //std::cout << "to_append: " << std::endl;
-        //print_path(to_append, g);
-        Vertex append_after_vertex = source(to_append[0], g);
-        //std::cout << "append_after_vertex: " << append_after_vertex.name << std::endl;
-        //std::cout << "p before appending to_append: " << std::endl;
-        //print_path(p, g);
-        int ind_to_append = find_ind_edge_ending_with(p,
-                                                      append_after_vertex,
-                                                      g);
-        ind_to_append += 1;
-        //std::cout << "ind_to_append: " << ind_to_append << std::endl;
-
-        for(unsigned int i=0; i<to_append.size(); ++i)
-            p.insert(p.begin() + ind_to_append + i, to_append[i]);
-        //std::cout << "p after appending to_append: " << std::endl;
-        //print_path(p, g);
-
-        // remove left overs from p
-        for(unsigned int i=0; i<leftovers.size(); ++i)
-            p = remove_edge_from_set(leftovers[i], p, g, false);
-
-
-        return std::make_tuple(p, p_inter, leftovers, to_append.back());
+        return p + to_append;
     }
 
+    // Convert an edge set from one graph to another
+    // (edge descriptors) are invalidated during remove/add operations
     EdgeSets translate_edge_sets(EdgeSets P,
-                               const MyGraph & g_p,
-                               const MyGraph & g,
-                               bool inv_mode=false){
+                                const MyGraph & g_new){
 
-        EdgeSets P_out;
-        EdgeSet p;
-        for(unsigned int i=0; i<P.size(); ++i){
-            p = translate_edge_set(P[i], g_p, g, inv_mode);
-            P_out.push_back(p);
-        }
-        return P_out;
-    }
-
-    EdgeSet translate_edge_set(EdgeSet p,
-                               const MyGraph & g_p,
-                               const MyGraph & g,
-                               bool inv_mode=false){
-
-        EdgeSet p_out;
-        Edge e;
-        for(unsigned int i=0; i<p.size(); ++i){
-            e = translate_edge(p[i], g_p, g, inv_mode);
-            p_out.push_back(e);
-        }
-        return p_out;
+            EdgeSets P_out;
+            for(unsigned int i=0; i<P.size(); ++i){
+                P[i].convert_to_graph(g_new);
+                P_out.push_back(P[i]);
+            }
+            return P_out;
     }
 
     Edge translate_edge(Edge e,
-                           const MyGraph & g_p,
-                           const MyGraph & g,
-                           bool inv_mode){
+                        const MyGraph & g_p,
+                        const MyGraph & g){
         std::pair<Edge, bool> e_out;
-        if(inv_mode)
-            e_out = edge(target(e, g_p), source(e, g_p), g);
-        else
-            e_out = edge(source(e, g_p), target(e, g_p), g);
+        e_out = edge(source(e, g_p), target(e, g_p), g);
 
         if(!e_out.second){
-            print_edge(e, g_p);
-            //std::cout << "cannot be translated!" << std::endl;
+            // cannot be translated! This could be a problem :~(
+            //print_edge(e, g_p);
         }
         return e_out.first;
-    }
+}
 
     void invert_edge(Edge e,
                      bool inv_label,
                      bool inv_algebraic_sign,
-                     const MyGraph & g_in,
-                     MyGraph & g_out){
+                     MyGraph & g){
 
-        Vertex u = source(e, g_in);
-        Vertex v = target(e, g_in);
-        if(edge(u, v, g_out).second){
-            double weight = g_in[e].weight;
-            int label = g_in[e].label;
-            int id = g_in[e].id;
+        Vertex u = source(e, g);
+        Vertex v = target(e, g);
+
+        //print_edge(e, g);
+
+        if(g[e].label > 0){
+            double weight = g[e].weight;
+            int label = g[e].label;
+            int id = g[e].id;
 
             if(inv_algebraic_sign)
                 weight = -weight;
@@ -567,69 +438,41 @@ namespace utils{
             if(inv_label)
                 label = -label;
 
-            add_edge(g_out,
-                    g_in[v].id,
-                    g_in[u].id,
+            add_edge(g,
+                    g[v].id,
+                    g[u].id,
                     weight,
                     id,
-                    g_in[v].name,
-                    g_in[u].name,
+                    g[v].name,
+                    g[u].name,
                     label);
 
-            boost::remove_edge(u, v, g_out);
+            boost::remove_edge(u, v, g);
         }
-    };
+    }
 
     void invert_edges(EdgeSets edge_sets,
                       bool inv_label,
                       bool inv_algebraic_sign,
-                      const MyGraph & g_in,
-                      MyGraph & g_out){
+                      MyGraph & g){
 
-        EdgeSets::iterator it;
-        for (it=edge_sets.begin(); it != edge_sets.end(); ++it) {
-            invert_edges(*it, inv_label, inv_algebraic_sign, g_in, g_out);
+        for(unsigned int i=0; i<edge_sets.size(); ++i){
+            invert_edges(edge_sets[i], inv_label, inv_algebraic_sign, g);
         }
     }
 
     void invert_edges(EdgeSet edge_path,
                       bool inv_label,
                       bool inv_algebraic_sign,
-                      const MyGraph & g_in,
-                      MyGraph & g_out){
+                      MyGraph & g){
 
-        EdgeSet::iterator it;
-        for (it=edge_path.begin(); it != edge_path.end(); ++it) {
-            invert_edge(*it, inv_label, inv_algebraic_sign, g_in, g_out);
+        //print_path(edge_path, g);
+        for(unsigned int i=0; i<edge_path.size(); ++i){
+            invert_edge(edge_path[i], inv_label, inv_algebraic_sign, g);
         }
     }
 
-    bool vertex_is_in_set(Vertex v,
-                          EdgeSet p,
-                          const MyGraph & g){
-
-        EdgeSet::iterator it;
-        //int id_v = g[v].id;
-
-        for (it=p.begin(); it != p.end(); ++it) {
-            if((g[target(*it, g)].id == g[v].id) || (g[source(*it, g)].id == g[v].id))
-                return true;
-        }
-
-        return false;
-
-    }
-
-    void set_label_on_path(EdgeSet p,
-                            int label,
-                            MyGraph & g){
-
-        EdgeSet::iterator it;
-        for (it=p.begin(); it != p.end(); ++it) {
-            g[*it].label = label;
-        }
-    }
-
+    // Returns the total cost of edge sets
     double calc_cost(EdgeSets P, const MyGraph & g){
         double cost;
 
@@ -643,6 +486,7 @@ namespace utils{
     }
 
 
+    // Convert to python list
     bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g){
 
         bp::list array;
@@ -655,5 +499,159 @@ namespace utils{
         }
 
         return array;
+    }
+
+    EdgeSets augment(EdgeSets P_l,
+                     EdgeSet p_inter,
+                     Vertex sink_vertex,
+                     MyGraph & g,
+                     MyGraph & g_c,
+                     MyGraph & g_l){
+
+        EdgeSets P_l_plus_1;
+
+        //Loop over P_l. Stop when label = 0, i.e. edge correspond
+        // to a "cut"
+        // If necessary, look in free edges, i.e. edges in p_inter or leftovers
+        // from other interlaced paths
+        EdgeSet leftovers(g);
+        int label_p = -P_l.size();
+        Vertex curr_vertex;
+        bool got_cut;
+        bool got_non_cont;
+        for (auto p : boost::adaptors::reverse(P_l)){
+            // Loop over p = P_l[i]
+            int ind_edge = 0;
+            Edge curr_edge = p[ind_edge];
+            int discontinuous_ind;
+            while(true){
+                got_cut = false;
+                got_non_cont = false;
+                if(target(curr_edge, g) == sink_vertex)
+                    break;
+
+                if(g[curr_edge].label == 0){ // we hit a cut...
+                    p.remove_edge(curr_edge);
+                    curr_vertex = source(curr_edge, g);
+                    p = utils::append_inter(p,
+                                            p_inter,
+                                            curr_vertex,
+                                            sink_vertex,
+                                            g);
+                    // remove all edges that have been interlaced
+                    discontinuous_ind = p.is_discontinuous();
+                    while(true){
+                        leftovers += p[discontinuous_ind];
+                        p.remove_edge(p[discontinuous_ind]);
+                        discontinuous_ind = p.is_discontinuous();
+                        if(discontinuous_ind == -1)
+                            break;
+                    }
+                    curr_edge = p.back();
+                    got_cut = true;
+                }
+                if(target(curr_edge, g) == sink_vertex)
+                    break;
+                // no cut but need an edge from p_inter or leftovers
+                else if(!p.are_contiguous(curr_edge, p.next(curr_edge)) ||
+                        g[target(p.back(), g)].id != g[sink_vertex].id){
+                    // unfinished path, look in free edges
+                    //utils::print_path(leftovers+p_inter, g);
+                    p += build_p_from_self_or_store(curr_edge,
+                                                    leftovers + p_inter,
+                                                    label_p,
+                                                    sink_vertex,
+                                                    g);
+                    // clear following edges that are not valid anymore
+                    discontinuous_ind = p.is_discontinuous();
+                    while(true){
+                        p.remove_edge(p[discontinuous_ind]);
+                        discontinuous_ind = p.is_discontinuous();
+                        if(discontinuous_ind == -1)
+                            break;
+                    }
+                    curr_edge = p.back();
+                    got_non_cont = true;
+                }
+                if(target(curr_edge, g) == sink_vertex)
+                    break;
+                // Nothing special, keep going...
+                if(!got_cut || !got_non_cont){
+                    curr_edge = p.next(curr_edge);
+                }
+            }
+            P_l_plus_1.push_back(p);
+        }
+
+        // Need to invert order of P_l_plus_1
+        std::reverse(P_l_plus_1.begin(), P_l_plus_1.end());
+
+        // Building p_ from p_inter and leftovers
+        EdgeSet p_ = build_p_from_self_or_store(p_inter[0],
+                                                    leftovers+p_inter,
+                                                    label_p-1,
+                                                    sink_vertex,
+                                                    g);
+
+        P_l_plus_1.push_back(p_);
+
+        for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
+            utils::set_label_to_edges(g, P_l_plus_1[i], -(i+1));
+
+        return P_l_plus_1;
+    }
+
+    EdgeSet build_p_from_self_or_store(Edge start_edge,
+                                           EdgeSet store,
+                                           int label_p,
+                                           Vertex sink_vertex,
+                                           const MyGraph & g){
+
+        // build added path p_ from store
+        EdgeSet p_(g);
+        Edge e;
+        MyGraph::out_edge_iterator ei, ei_end;
+        p_ += start_edge;
+        Vertex curr_vertex = target(start_edge, g);
+        int curr_vertex_id = g[curr_vertex].id;
+        int ind_store;
+        bool got_self = false;
+        bool got_store = false;
+        //utils::print_path(p_, g);
+        while(true){
+            ind_store = utils::find_ind_edge_starting_with(store,
+                                                            curr_vertex_id,
+                                                            g);
+            // Check first if we can merge back to myself
+            got_self = false;
+            got_store = false;
+
+            for (boost::tie(ei, ei_end) = out_edges(curr_vertex, g);
+                ei != ei_end; ++ei) {
+                e = edge(source(*ei, g),
+                            target(*ei, g) , g).first;
+                if(g[e].label == label_p){
+                    p_ += *ei;
+                    got_self = true;
+                    curr_vertex = target(p_.back(), g);
+                    curr_vertex_id = g[curr_vertex].id;
+                    break;
+                }
+            }
+            if(ind_store != -1 && !got_self){ // Add edge from store
+                //std::cout << "got from store" << std::endl;
+                e = store[ind_store];
+                p_ += e;
+                got_store = true;
+                store = store.remove_edge(e);
+                curr_vertex = target(p_.back(), g);
+                curr_vertex_id = g[curr_vertex].id;
+            }
+            if(got_self + got_store == 0){
+                //std::cout << "got neither self or store" << std::endl;
+                break;
+            }
+        }
+        return p_;
     }
 }
