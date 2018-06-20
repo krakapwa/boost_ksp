@@ -9,9 +9,14 @@ nodes = {'a': source_ind,
 
 inv_nodes = {v: k for k, v in nodes.items()}
 
-g = libksp.ksp.create()
-g.set_loglevel(3)
-g.new_graph(0)
+g = libksp.Ksp()
+#g.set_source(source_ind, 'a')
+#g.set_sink(sink_ind, 'z')
+g.config(source_ind,
+         sink_ind,
+         source_vertex_name="source",
+         sink_vertex_name="sink")
+#g.set_loglevel(3)
 
 edges = list()
 id_e = 0
@@ -42,13 +47,11 @@ id_e += 1
 edges.append((nodes['c'], nodes['g'], 1, id_e, 'c', 'g'))
 id_e += 1
 
-g.set_source(source_ind, 'a')
-g.set_sink(sink_ind, 'z')
 
 for e in edges:
     g.add_edge(*e)
 
-res = g.do_ksp()
+res = g.run()
 
 for k in range(len(res)):
     print('k={}'.format(k))

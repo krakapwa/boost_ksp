@@ -103,14 +103,13 @@ namespace utils{
         VertexPath::reverse_iterator it;
         //IndexMap index = get(vertex_index, g);
         for (it=path.rbegin(); it != path.rend(); ++it) {
-
             std::cout << *it << " ";
         }
         std::cout << std::endl;
     }
 
     void print_edge(Edge e, const MyGraph & g){
-        BOOST_LOG_TRIVIAL(info) << "(" << g[source(e, g)].name
+        BOOST_LOG_TRIVIAL(debug) << "(" << g[source(e, g)].name
                                  << ","
                                  << g[target(e, g)].name << ") ";
     }
@@ -125,7 +124,7 @@ namespace utils{
     void print_paths(EdgeSets paths, const MyGraph & g){
 
         for(unsigned int i = 0; i < paths.size(); ++i){
-            BOOST_LOG_TRIVIAL(info) << "path #" << i;
+            BOOST_LOG_TRIVIAL(debug) << "path #" << i;
             print_path(paths[i], g);
         }
     }

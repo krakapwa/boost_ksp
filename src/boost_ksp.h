@@ -1,7 +1,6 @@
 #ifndef BOOSTKSP_H
 #define BOOSTKSP_H
 
-#include "pyksp.h"
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
