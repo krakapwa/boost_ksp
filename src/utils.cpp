@@ -111,7 +111,10 @@ namespace utils{
     void print_edge(Edge e, const MyGraph & g){
         BOOST_LOG_TRIVIAL(debug) << "(" << g[source(e, g)].name
                                  << ","
-                                 << g[target(e, g)].name << ") ";
+                                 << g[target(e, g)].name << ")"
+                                 << "/"
+                                 << "(" << g[source(e, g)].id
+                                 << "," << g[target(e, g)].id << ") ";
     }
 
     void print_path(EdgeSet path, const MyGraph & g){
@@ -182,6 +185,10 @@ namespace utils{
                 u = source(e_in[i], g_in);
                 v = target(e_in[i], g_in);
             }
+
+            if(!edge(u,v, g_out).second)
+                BOOST_LOG_TRIVIAL(debug) <<
+                  "set_label_to_invalid_edges: Edge doesnt exist!!!";
 
             g_out[edge(u,v, g_out).first].label = label;
         }
@@ -331,12 +338,12 @@ namespace utils{
                                     int v_id,
                                     const MyGraph & g){
 
+      BOOST_LOG_TRIVIAL(debug) << "find_ind_edge_starting_with (int): " << v_id;
         for(unsigned int i=0; i < p.size(); ++i){
             if(g[source(p[i], g)].id == v_id){
                 return i;
             }
         }
-
         return -1;
     }
 
@@ -355,8 +362,8 @@ namespace utils{
 
     // This function is called when interlacing occurs.
     // One or several edges of p_inter are appended to p.
-    EdgeSet append_inter(EdgeSet p,
-                         EdgeSet p_inter,
+    EdgeSet append_path(EdgeSet p,
+                         EdgeSet p_app,
                          Vertex start,
                          Vertex sink,
                          const MyGraph & g){
@@ -364,27 +371,60 @@ namespace utils{
         // Find label of path p
         int label_p = g[p[0]].label;
 
-        // Find index of start in p_inter
+        // Find index of start in p_app
         EdgeSet to_append(g);
-        int ind_start = find_ind_edge_starting_with(p_inter, start, g);
+        //BOOST_LOG_TRIVIAL(debug) << "find index of p_app to start from";
+        unsigned int ind_start = find_ind_edge_starting_with(p_app,
+                                                             g[start].id,
+                                                             g);
 
-        Edge curr_edge = p_inter[ind_start];
+        //BOOST_LOG_TRIVIAL(debug) << "setting starting edge. ind: " << ind_start;
+        Edge curr_edge = p_app[ind_start];
 
-        // Append edges of p_inter until:
+        // Append edges of p_app until:
         // (1) sink is reached
         // (2) target of edge is not part of p (based on label)
-        // (3) p_inter is "broken"
+        // (3) p_app is "broken"
+
         while(true){
+            BOOST_LOG_TRIVIAL(debug) << "curr_edge";
+            print_edge(curr_edge, g);
+            BOOST_LOG_TRIVIAL(debug) << "g[curr_edge].label: "
+                                    << g[curr_edge].label;
+            BOOST_LOG_TRIVIAL(debug) << "g[target(curr_edge,g)].id: "
+                                     << g[target(curr_edge, g)].id;
+            BOOST_LOG_TRIVIAL(debug) << "g[sink].id: "
+                                     << g[sink].id;
+            BOOST_LOG_TRIVIAL(debug) << "g[p_app[ind_start]].id_vertex_out: "
+                                    << g[p_app[ind_start]].id_vertex_out;
+            BOOST_LOG_TRIVIAL(debug) << "g[p_app[ind_start]].id_vertex_in: "
+                                    << g[p_app[ind_start]].id_vertex_in;
             to_append += curr_edge;
-            if(g[target(curr_edge, g)].id == g[sink].id)
+            BOOST_LOG_TRIVIAL(debug) << "1";
+            if(g[target(curr_edge, g)].id == g[sink].id){
+                BOOST_LOG_TRIVIAL(debug) << "reached sink with p_app";
                 break;
-            if(g[curr_edge].label == label_p)
+            }
+            else if(g[curr_edge].label == label_p){
+                BOOST_LOG_TRIVIAL(debug) << "joined back to self";
                 break;
-            if(g[p_inter[ind_start]].id_vertex_out !=
-               g[p_inter.next(curr_edge)].id_vertex_in)
+            }
+            else if(g[p_app[ind_start]].id_vertex_out !=
+               g[p_app.next(curr_edge)].id_vertex_in){
+                BOOST_LOG_TRIVIAL(debug) << "reached discontinuity on p_app";
                 break;
+            }
+            BOOST_LOG_TRIVIAL(debug) << "2";
             ind_start += 1;
-            curr_edge = p_inter[ind_start];
+            BOOST_LOG_TRIVIAL(debug) << "ind_start: " << ind_start;
+            BOOST_LOG_TRIVIAL(debug) << "p_app.size(): " << p_app.size();
+            if(ind_start < p_app.size()){
+                BOOST_LOG_TRIVIAL(debug) << "ah";
+                curr_edge = p_app[ind_start];
+                BOOST_LOG_TRIVIAL(debug) << "oh";
+            }
+            else
+                break;
         }
 
         return p + to_append;
@@ -484,7 +524,6 @@ namespace utils{
         return cost;
     }
 
-
     // Convert to python list
     bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g){
 
@@ -507,93 +546,100 @@ namespace utils{
                      MyGraph & g_c,
                      MyGraph & g_l){
 
+        // initialize P_l_plus_1 with empty sets
         EdgeSets P_l_plus_1;
+        EdgeSet P_l_plus_1_flat(g);
+        EdgeSet P_l_flat(g);
+        P_l_flat = flatten(P_l, g);
 
-        //Loop over P_l. Stop when label = 0, i.e. edge correspond
-        // to a "cut"
         // If necessary, look in free edges, i.e. edges in p_inter or leftovers
         // from other interlaced paths
-        EdgeSet leftovers(g);
-        int label_p = -P_l.size();
+        int label_p;
         Vertex curr_vertex;
-        bool got_cut;
-        bool got_non_cont;
-        for (auto p : boost::adaptors::reverse(P_l)){
-            // Loop over p = P_l[i]
-            int ind_edge = 0;
-            Edge curr_edge = p[ind_edge];
-            int discontinuous_ind;
-            while(true){
-                got_cut = false;
-                got_non_cont = false;
-                if(target(curr_edge, g) == sink_vertex)
-                    break;
+        for(auto p : boost::adaptors::reverse(P_l)){
+            Edge curr_edge = p[0];
+            EdgeSet p_new(g);
+            label_p = g[curr_edge].label; // we are tracking this label
+            p_new += curr_edge;
+            while(target(curr_edge, g) != sink_vertex){
+                utils::print_edge(curr_edge, g);
+                curr_vertex = target(curr_edge, g);
+                EdgeSet edges_self = out_edges_with_label(curr_vertex,
+                                                          label_p,
+                                                          g);
+                if(edges_self.size() == 0){ //append inter or branch to other path
+                    //curr_vertex = source(curr_edge, g);
+                    if(p_inter.has_out_vertex(curr_vertex)){
+                        BOOST_LOG_TRIVIAL(debug) << "append inter";
+                        p_new = utils::append_path(p_new,
+                                                   p_inter,
+                                                   curr_vertex,
+                                                   sink_vertex,
+                                                   g);
+                        // remove all edges that have been interlaced
+                        BOOST_LOG_TRIVIAL(debug) << "remove interlaced edges";
 
-                if(g[curr_edge].label == 0){ // we hit a cut...
-                    p.remove_edge(curr_edge);
-                    curr_vertex = source(curr_edge, g);
-                    p = utils::append_inter(p,
-                                            p_inter,
-                                            curr_vertex,
-                                            sink_vertex,
-                                            g);
-                    // remove all edges that have been interlaced
-                    discontinuous_ind = p.is_discontinuous();
-                    while(true){
-                        leftovers += p[discontinuous_ind];
-                        p.remove_edge(p[discontinuous_ind]);
-                        discontinuous_ind = p.is_discontinuous();
-                        if(discontinuous_ind == -1)
-                            break;
+                        // clean p_inter
+                        p_inter -= p_new;
                     }
-                    curr_edge = p.back();
-                    got_cut = true;
-                }
-                if(target(curr_edge, g) == sink_vertex)
-                    break;
-                // no cut but need an edge from p_inter or leftovers
-                else if(!p.are_contiguous(curr_edge, p.next(curr_edge)) ||
-                        g[target(p.back(), g)].id != g[sink_vertex].id){
-                    // unfinished path, look in free edges
-                    //utils::print_path(leftovers+p_inter, g);
-                    p += build_p_from_self_or_store(curr_edge,
-                                                    leftovers + p_inter,
-                                                    label_p,
-                                                    sink_vertex,
-                                                    g);
-                    // clear following edges that are not valid anymore
-                    discontinuous_ind = p.is_discontinuous();
-                    while(true){
-                        p.remove_edge(p[discontinuous_ind]);
-                        discontinuous_ind = p.is_discontinuous();
-                        if(discontinuous_ind == -1)
-                            break;
+                    else{
+                        BOOST_LOG_TRIVIAL(info) << "branch to another path";
+                        EdgeSet test = out_edges_with_neg_label(curr_vertex,
+                                                                P_l_flat,
+                                                                g);
+                        BOOST_LOG_TRIVIAL(info) << "flatten before";
+                        test -= P_l_plus_1_flat;
+                        BOOST_LOG_TRIVIAL(info) << "flatten after";
+
+                        print_path(test, g);
+                        // Choose edge with lowest label
+                        BOOST_LOG_TRIVIAL(debug) << "sort out edges";
+                        std::sort(test.begin(), test.end(), LabelSorter(g));
+                        print_path(test, g);
+                        BOOST_LOG_TRIVIAL(debug) << "size: " << test.size();
+                        //p_new += test.back();
+                        p_new += test[0];
+
                     }
-                    curr_edge = p.back();
-                    got_non_cont = true;
+                    curr_edge = p_new.back();
+                    //set_label(curr_edge, g, label_p);
                 }
-                if(target(curr_edge, g) == sink_vertex)
-                    break;
-                // Nothing special, keep going...
-                if(!got_cut || !got_non_cont){
-                    curr_edge = p.next(curr_edge);
+                else{ //follow myself
+                    curr_edge = edges_self[0];
+                    p_new += curr_edge;
+                    //set_label(curr_edge, g, label_p);
                 }
+
             }
-            P_l_plus_1.push_back(p);
+            set_label(p_new, g, label_p);
+            P_l_plus_1.push_back(p_new);
+            P_l_plus_1_flat = flatten(P_l_plus_1, g);
         }
 
+
+        // Find leftover edges, i.e. P_l_plus_1 - P_l
+        EdgeSet leftovers = P_l_flat - P_l_plus_1_flat;
+        leftovers.remove_label(0);
+
         // Need to invert order of P_l_plus_1
+        BOOST_LOG_TRIVIAL(debug) << "inverting order of P_l_plus_1";
         std::reverse(P_l_plus_1.begin(), P_l_plus_1.end());
 
-        // Building p_ from p_inter and leftovers
+        // Building p_ from p_inter and store
+        BOOST_LOG_TRIVIAL(debug) << "Building p_ from p_inter and store";
+        BOOST_LOG_TRIVIAL(debug) << "p_inter";
+        print_path(p_inter, g);
+        BOOST_LOG_TRIVIAL(debug) << "leftovers";
+        print_path(leftovers, g);
         EdgeSet p_ = build_p_from_self_or_store(p_inter[0],
-                                                    leftovers+p_inter,
-                                                    label_p-1,
-                                                    sink_vertex,
-                                                    g);
+                                                leftovers+p_inter,
+                                                label_p-1,
+                                                sink_vertex,
+                                                g);
 
         P_l_plus_1.push_back(p_);
 
+        BOOST_LOG_TRIVIAL(debug) << "setting labels from P_l_plus_1";
         for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
             utils::set_label_to_edges(g, P_l_plus_1[i], -(i+1));
 
@@ -652,5 +698,114 @@ namespace utils{
             }
         }
         return p_;
+    }
+
+    bool has_duplicate_vertex_ids(const MyGraph & g){
+
+        std::vector<int> ids;
+        VertexIter vi, vi_end;
+
+        for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi){
+            ids.push_back(g[*vi].id);
+        }
+
+        auto it = std::unique( ids.begin(), ids.end() );
+        return !(it == ids.end() );
+    }
+
+    bool has_duplicate_edge_ids(const MyGraph & g){
+
+        std::vector<int> ids;
+        EdgeIter ei, ei_end;
+
+        for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
+            ids.push_back(g[*ei].id);
+        }
+
+        auto it = std::unique( ids.begin(), ids.end() );
+        return !(it == ids.end() );
+    }
+
+    int num_edges_with_label(const MyGraph & g, int label){
+
+            std::vector<int> ids;
+            EdgeIter ei, ei_end;
+
+            for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
+            if(g[*ei].label == label)
+                ids.push_back(g[*ei].id);
+            }
+
+            return ids.size();
+        }
+
+    EdgeSet out_edges_with_label(Vertex v, int label, const MyGraph & g){
+        // return out_edges on graph g at vertex v with label label.
+
+        EdgeSet out(g);
+        MyGraph::out_edge_iterator ei, ei_end;
+        for (boost::tie(ei, ei_end) = out_edges(v, g);
+             ei != ei_end; ++ei) {
+            if(g[*ei].label == label)
+                out += *ei;
+
+        }
+
+        return out;
+    }
+
+    EdgeSet out_edges_with_neg_label(Vertex v, const MyGraph & g){
+        // return out_edges on graph g at vertex v with negative label.
+
+        EdgeSet out(g);
+        MyGraph::out_edge_iterator ei, ei_end;
+        for (boost::tie(ei, ei_end) = out_edges(v, g);
+             ei != ei_end; ++ei) {
+            if(g[*ei].label < 0){
+                out += *ei;
+            }
+
+        }
+
+        return out;
+    }
+
+    Edge first_out_edge(Vertex v, EdgeSet& s,
+                                           const MyGraph & g){
+        // return edges on graph g at vertex v
+        EdgeSet::iterator it;
+        for(it=s.begin(); it!= s.end(); ++it){
+            if(g[source(*it, g)].id == g[v].id){
+                return *it;
+            }
+
+        }
+
+        return *it;
+    }
+
+    EdgeSet out_edges_with_neg_label(Vertex v, EdgeSet& s, const MyGraph & g){
+        // return edges of set s on graph g at vertex v with negative label.
+
+        EdgeSet out(g);
+        EdgeSet::iterator it;
+        for(it=s.begin(); it!= s.end(); ++it){
+            if((g[*it].label < 0) && (g[source(*it, g)].id == g[v].id)){
+                out += *it;
+            }
+
+        }
+
+        return out;
+    }
+
+    EdgeSet flatten(EdgeSets & P, const MyGraph& g){
+
+        EdgeSet out = EdgeSet(g);
+        for(unsigned int i=0; i<P.size(); ++i){
+            for(unsigned int j=0; j<P[i].size(); ++j)
+                out += P[i][j];
+        }
+        return out;
     }
 }

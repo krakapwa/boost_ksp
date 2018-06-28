@@ -1,6 +1,5 @@
 from boostksp import libksp
 
-
 source_ind = 0
 sink_ind = 1
 
@@ -15,7 +14,8 @@ g = libksp.Ksp()
 g.config(source_ind,
          sink_ind,
          source_vertex_name="source",
-         sink_vertex_name="sink")
+         sink_vertex_name="sink",
+         log_level="trace")
 #g.set_loglevel(3)
 
 edges = list()
@@ -46,7 +46,6 @@ edges.append((nodes['g'], nodes['z'], 2, id_e, 'g', 'z'))
 id_e += 1
 edges.append((nodes['c'], nodes['g'], 1, id_e, 'c', 'g'))
 id_e += 1
-
 
 for e in edges:
     g.add_edge(*e)

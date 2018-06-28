@@ -35,6 +35,7 @@
 #include <tuple>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup/console.hpp>
 #include <boost/log/expressions.hpp>
 
 
@@ -90,6 +91,7 @@ struct VertexProperty{
     }
 };
 
+
 typedef adjacency_list<vecS, vecS, bidirectionalS,
     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
@@ -97,12 +99,10 @@ typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
 typedef graph_traits<MyGraph>::edge_descriptor Edge;
 typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > VertexPath;
 
-
 typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
 typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeVec;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
-
 
 struct EdgeSet{
     EdgeVec edges;
@@ -123,6 +123,27 @@ struct EdgeSet{
         return *this;
     }
 
+    EdgeSet operator-=(EdgeSet p) {
+
+        for(unsigned int i=0; i<p.size(); ++i){
+          *this -= p[i];
+        }
+
+        return *this;
+    }
+
+    EdgeSet operator-=(Edge & e) {
+
+        for(unsigned int i=0; i<edges.size(); ++i){
+          if(((*g)[e].id_vertex_in == (*g)[edges[i]].id_vertex_in) &&
+             ((*g)[e].id_vertex_out == (*g)[edges[i]].id_vertex_out)){
+                edges.erase(edges.begin() + i);
+                break;
+            }
+        }
+
+        return *this;
+    }
 
     EdgeSet& operator+=(const Edge & e) {
 
@@ -221,10 +242,10 @@ struct EdgeSet{
             }
         }
 
-        if(ind_e > size()-1) // we got last edge, return first edge
-            return edges[0];
-        else
+        if(ind_e < size()-1) // we got last edge, return first edge
             return edges[ind_e+1];
+        else
+            return edges[0];
     }
 
     bool are_contiguous(const Edge & e0, const Edge & e1){
@@ -281,6 +302,21 @@ struct EdgeSet{
 
     }
 
+    bool has_out_vertex(const Vertex & u){
+
+        EdgeSet::iterator it;
+        int curr_u_id;
+
+        for (it=begin(); it != end(); ++it) {
+            curr_u_id = ((*g)[source(*it, *g)]).id;
+            if((curr_u_id == (*(this->g))[u].id))
+                return true;
+        }
+
+        return false;
+
+    }
+
     bool has_edge(const Edge & e){
 
         EdgeSet::iterator it;
@@ -297,6 +333,32 @@ struct EdgeSet{
                 return true;
         }
         return false;
+
+    }
+
+    EdgeSet & remove_label(const int & label){
+
+      EdgeSet out(*g);
+      for(unsigned int i=0; i<edges.size(); ++i)
+        if((*g)[edges[i]].label != label)
+          out += edges[i];
+
+      edges = out.edges;
+
+      return *this;
+
+    }
+
+    EdgeSet & keep_label(const int & label){
+
+      EdgeSet out(*g);
+      for(unsigned int i=0; i<edges.size(); ++i)
+        if((*g)[edges[i]].label == label)
+          out += edges[i];
+
+      edges = out.edges;
+
+      return *this;
 
     }
 
@@ -322,7 +384,6 @@ struct EdgeSet{
         edges = p_valid.edges;
 
         return p_invalid;
-
     }
 
 
@@ -350,18 +411,31 @@ inline EdgeSet operator+(const EdgeSet & p0, const EdgeSet & p1) {
     return p_out;
 }
 
-inline EdgeSet operator-(const EdgeSet & p0, EdgeSet & p1) {
+inline EdgeSet operator-(EdgeSet & p0, EdgeSet & p1) {
 
     EdgeSet p_out(*(p0.g));
     p_out += p0;
     for(unsigned int i=0; i<p1.size(); ++i){
-        if(!p_out.has_edge(p1[i]))
-            p_out += p1[i];
+        if(p_out.has_edge(p1[i]))
+            p_out -= p1[i];
     }
 
     return p_out;
 }
 
-typedef std::vector<EdgeSet> EdgeSets;
+class LabelSorter{
+    MyGraph g;
 
+    public:
+        LabelSorter(MyGraph a_g){ g = a_g; }
+        bool compareLabels(const Edge e0, const Edge e1, MyGraph g) const{
+            return g[e0].label > g[e1].label;
+        }
+        bool operator()(const Edge e0, const Edge e1) const {
+            return compareLabels( e0 , e1 , g);
+        }
+};
+
+
+typedef std::vector<EdgeSet> EdgeSets;
 #endif

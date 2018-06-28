@@ -36,6 +36,8 @@ namespace utils {
                      std::string str_0,
                      std::string str_1,
                      int label);
+
+    int get_max_id(const MyGraph & g);
     void print_edge(Edge e, const MyGraph & g);
     void print_dist_pred(std::vector<double> dist,
                         std::vector<Vertex> preds,
@@ -123,11 +125,11 @@ namespace utils {
 
     double calc_cost(EdgeSets P, const MyGraph & g);
 
-    EdgeSet append_inter(EdgeSet p,
-                         EdgeSet p_inter,
-                         Vertex start,
-                         Vertex sink,
-                         const MyGraph & g);
+    EdgeSet append_path(EdgeSet p,
+                        EdgeSet p_app,
+                        Vertex start,
+                        Vertex sink,
+                        const MyGraph & g);
 
     EdgeSet build_p_from_self_or_store(Edge start_edge,
                                            EdgeSet store,
@@ -144,6 +146,15 @@ namespace utils {
                      MyGraph & g_c,
                      MyGraph & g_l);
 
+    bool has_duplicate_vertex_ids(const MyGraph & g);
+    bool has_duplicate_edge_ids(const MyGraph & g);
+    int num_edges_with_label(const MyGraph & g, int label);
+    EdgeSet out_edges_with_label(Vertex v, int label, const MyGraph & g);
+    EdgeSet out_edges_with_neg_label(Vertex v, const MyGraph & g);
+    EdgeSet out_edges_with_neg_label(Vertex v, EdgeSet& s, const MyGraph & g);
+    Edge first_out_edge(Vertex v, EdgeSet& s,const MyGraph & g);
+
+    EdgeSet flatten(EdgeSets & P, const MyGraph& g);
 }
 
 #endif

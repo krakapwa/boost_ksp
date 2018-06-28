@@ -68,6 +68,8 @@ void Ksp::new_graph(int a_n_vertices=0){
     (*G)[graph_bundle].name = "defaultName";
     BOOST_LOG_TRIVIAL(info) << "Creating graph with n_vertices: " <<
         n_vertices;
+    BOOST_LOG_TRIVIAL(info) << "n_edge: " <<
+      num_edges(*G);
 
 }
 
@@ -93,7 +95,6 @@ void Ksp::set_loglevel(std::string a_log_level) {
         (
             logging::trivial::severity >= log_level
         );
-
 }
 
 bp::list Ksp::run(){
@@ -115,8 +116,13 @@ bp::list Ksp::run(){
 
     //int l_max = std::numeric_limits<int>::max();
     //int l_max = 3;
+    BOOST_LOG_TRIVIAL(debug) << "Checking duplicate vertex ids for g";
+    BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_vertex_ids(*G);
 
-    BOOST_LOG_TRIVIAL(info) << "Bellman-Ford...";
+    BOOST_LOG_TRIVIAL(debug) << "Checking duplicate edge ids for g";
+    BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_edge_ids(*G);
+
+    BOOST_LOG_TRIVIAL(debug) << "Bellman-Ford...";
     std::tie(res_path, res_ok, res_distance) =
         bellman_ford_shortest_paths(*G);
 
@@ -124,7 +130,7 @@ bp::list Ksp::run(){
         BOOST_LOG_TRIVIAL(error) << "Couldn't compute a single path!";
     }
     else{
-        BOOST_LOG_TRIVIAL(info) << "...ok";
+        BOOST_LOG_TRIVIAL(debug) << "...ok";
         P.push_back(res_path);
         cost = utils::calc_cost(P, *G);
         BOOST_LOG_TRIVIAL(info) << "l: " << 0
@@ -140,40 +146,45 @@ bp::list Ksp::run(){
 
     utils::set_label(P[0], *G, -1);
 
-    BOOST_LOG_TRIVIAL(info) << "inverted edges on g_c";
+    BOOST_LOG_TRIVIAL(debug) << "inverted edges on g_c";
 
     for(int l = 1; l < l_max; ++l){
 
         EdgeSet p_cut(*G);
-        BOOST_LOG_TRIVIAL(info) << "l: " << l;
-
         if(l != 0){
             // Check costs for minima
         }
 
         for(unsigned int i=0; i<P.size(); ++i)
             utils::set_label(P[i], *G, -(i+1));
-        BOOST_LOG_TRIVIAL(info) << "setting labels on past solutions";
+        BOOST_LOG_TRIVIAL(debug) << "setting labels on past solutions";
 
         cost_transform(res_distance, *G_c, *G_c);
-        BOOST_LOG_TRIVIAL(info) << "done cost_transform";
+        BOOST_LOG_TRIVIAL(debug) << "done cost_transform";
         utils::print_all(*G_c);
-        BOOST_LOG_TRIVIAL(info) << "Dijkstra...";
+        BOOST_LOG_TRIVIAL(debug) << "Dijkstra...";
         std::tie(p_inter, res_ok, res_distance) =
             dijkstra_shortest_paths(*G_c, (*G)[sink_vertex].id);
 
         // p_cut are invalid edges, i.e. will be excluded from augmentation
+        BOOST_LOG_TRIVIAL(debug) << "p_inter before:";
+        utils::print_path(p_inter, *G);
         p_cut = p_inter.convert_to_graph(*G);
+        BOOST_LOG_TRIVIAL(debug) << "p_inter after:";
+        utils::print_path(p_inter, *G);
 
         if(res_ok){
-            BOOST_LOG_TRIVIAL(info) << "ok...";
+            BOOST_LOG_TRIVIAL(debug) << "ok...";
 
             if(p_cut.size() > 0){
                 utils::set_label_to_invalid_edges(p_cut, *G_c, *G, 0, true);
+                BOOST_LOG_TRIVIAL(debug) << "num invalid edges (cut) : "
+                                         << utils::num_edges_with_label(*G, 0);
+                BOOST_LOG_TRIVIAL(debug) << "p_cut: ";
+                utils::print_path(p_cut, *G_c);
                 utils::print_all(*G);
-                //utils::print_path(p_inter, *G);
 
-                BOOST_LOG_TRIVIAL(info) << "Augmenting";
+                BOOST_LOG_TRIVIAL(debug) << "Augmenting";
                 P = utils::augment(P,
                                    p_inter,
                                    sink_vertex,
@@ -212,7 +223,7 @@ bp::list Ksp::run(){
             utils::print_all(*G);
         }
         else{
-            BOOST_LOG_TRIVIAL(info) << "Stopped at l= " << l;
+            BOOST_LOG_TRIVIAL(info) << "Stopped at l= " << l-1;
 
             return utils::edgeSets_to_list(P,
                                            *G);
@@ -253,7 +264,7 @@ Ksp::dijkstra_shortest_paths(const MyGraph & g, int sink_id){
                                                 source_vertex, sink_vertex);
 
     if(!r){
-        BOOST_LOG_TRIVIAL(info) << "Dijkstra couldn't reach sink node";
+        BOOST_LOG_TRIVIAL(info) << "Couldn't reach sink node";
         out_path = EdgeSet(g);
         r = false;
     }
