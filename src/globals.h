@@ -108,6 +108,7 @@ struct EdgeSet{
     EdgeVec edges;
     const MyGraph * g;
     using iterator = EdgeVec::iterator;
+    using reverse_iterator = EdgeVec::reverse_iterator;
 
     // Default constructor. Must assign a graph!
     EdgeSet(const MyGraph & a_g){
@@ -134,13 +135,25 @@ struct EdgeSet{
 
     EdgeSet operator-=(Edge & e) {
 
+        Vertex curr_u;
+        Vertex curr_v;
+        Vertex u = source(e, *g);
+        Vertex v = target(e, *g);
+        EdgeVec new_edges;
+
         for(unsigned int i=0; i<edges.size(); ++i){
-          if(((*g)[e].id_vertex_in == (*g)[edges[i]].id_vertex_in) &&
-             ((*g)[e].id_vertex_out == (*g)[edges[i]].id_vertex_out)){
-                edges.erase(edges.begin() + i);
-                break;
+            curr_u = source(edges[i], *g);
+            curr_v = target(edges[i], *g);
+            if(!(((*g)[u].id == (*g)[curr_u].id) &&
+                ((*g)[v].id == (*g)[curr_v].id))){
+                    new_edges.push_back(edges[i]);
+            }
+            else{
+                BOOST_LOG_TRIVIAL(debug) << "removed 1 edge";
             }
         }
+
+        edges = new_edges;
 
         return *this;
     }
@@ -176,6 +189,14 @@ struct EdgeSet{
 
     iterator end(){
         return edges.end();
+    }
+
+    reverse_iterator rbegin(){
+        return edges.rbegin();
+    }
+
+    reverse_iterator rend(){
+        return edges.rend();
     }
 
     EdgeSet & insert(EdgeSet & p, const int & ind){
@@ -309,7 +330,7 @@ struct EdgeSet{
 
         for (it=begin(); it != end(); ++it) {
             curr_u_id = ((*g)[source(*it, *g)]).id;
-            if((curr_u_id == (*(this->g))[u].id))
+            if((curr_u_id == (*(g))[u].id))
                 return true;
         }
 
@@ -362,6 +383,15 @@ struct EdgeSet{
 
     }
 
+    bool has_label(const int & label){
+
+      for(unsigned int i=0; i<edges.size(); ++i)
+        if((*g)[edges[i]].label == label)
+          return true;
+
+      return false;
+    }
+
     EdgeSet convert_to_graph(const MyGraph & new_g){
 
         EdgeSet p_valid(new_g);
@@ -411,7 +441,16 @@ inline EdgeSet operator+(const EdgeSet & p0, const EdgeSet & p1) {
     return p_out;
 }
 
-inline EdgeSet operator-(EdgeSet & p0, EdgeSet & p1) {
+inline EdgeSet operator+(const EdgeSet & p0, const Edge& e) {
+
+    EdgeSet p_out(*(p0.g));
+    p_out += p0;
+    p_out += e;
+
+    return p_out;
+}
+
+inline EdgeSet operator-(EdgeSet p0, EdgeSet p1) {
 
     EdgeSet p_out(*(p0.g));
     p_out += p0;

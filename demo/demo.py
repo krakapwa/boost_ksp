@@ -15,7 +15,8 @@ g.config(source_ind,
          sink_ind,
          source_vertex_name="source",
          sink_vertex_name="sink",
-         log_level="trace")
+         log_level="trace",
+         min_cost=True)
 #g.set_loglevel(3)
 
 edges = list()

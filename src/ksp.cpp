@@ -22,16 +22,18 @@
 #include "boost_ksp.h"
 
 void Ksp::config(int source_vertex_id,
-            int sink_vertex_id,
-            int a_l_max,
-            std::string source_vertex_name,
-            std::string sink_vertex_name,
-            std::string loglevel){
+                 int sink_vertex_id,
+                 int a_l_max,
+                 std::string source_vertex_name,
+                 std::string sink_vertex_name,
+                 std::string loglevel,
+                 bool a_min_cost){
 
     set_source(source_vertex_id, source_vertex_name);
     set_sink(sink_vertex_id, sink_vertex_name);
     l_max = a_l_max;
     set_loglevel(loglevel);
+    min_cost = a_min_cost;
 }
 
 
@@ -113,6 +115,7 @@ bp::list Ksp::run(){
     std::vector<double> res_distance;
 
     EdgeSets P;
+    EdgeSets P_prev;
 
     //int l_max = std::numeric_limits<int>::max();
     //int l_max = 3;
@@ -147,6 +150,7 @@ bp::list Ksp::run(){
     utils::set_label(P[0], *G, -1);
 
     BOOST_LOG_TRIVIAL(debug) << "inverted edges on g_c";
+    P_prev = P;
 
     for(int l = 1; l < l_max; ++l){
 
@@ -167,11 +171,20 @@ bp::list Ksp::run(){
             dijkstra_shortest_paths(*G_c, (*G)[sink_vertex].id);
 
         // p_cut are invalid edges, i.e. will be excluded from augmentation
-        BOOST_LOG_TRIVIAL(debug) << "p_inter before:";
-        utils::print_path(p_inter, *G);
         p_cut = p_inter.convert_to_graph(*G);
-        BOOST_LOG_TRIVIAL(debug) << "p_inter after:";
+        BOOST_LOG_TRIVIAL(debug) << "p_inter:";
         utils::print_path(p_inter, *G);
+
+        // convert p_cut to valid edges on *G
+        Edge e;
+        Vertex u, v;
+        EdgeSet p_cut_g(*G);
+        for(unsigned int i=0; i<p_cut.size(); ++i){
+            e = p_cut[i];
+            u = source(e, *G_c);
+            v = target(e, *G_c);
+            p_cut_g += edge(v, u ,*G).first;
+        }
 
         if(res_ok){
             BOOST_LOG_TRIVIAL(debug) << "ok...";
@@ -184,8 +197,9 @@ bp::list Ksp::run(){
                 utils::print_path(p_cut, *G_c);
                 utils::print_all(*G);
 
-                BOOST_LOG_TRIVIAL(debug) << "Augmenting";
+                BOOST_LOG_TRIVIAL(info) << "Augmenting";
                 P = utils::augment(P,
+                                   p_cut_g,
                                    p_inter,
                                    sink_vertex,
                                    *G,
@@ -195,10 +209,15 @@ bp::list Ksp::run(){
             else{
                 P.insert(P.end(), p_inter);
             }
+            new_cost = utils::calc_cost(P, *G);
             BOOST_LOG_TRIVIAL(info) << "l: " << l
-                                    << ", cost: " << utils::calc_cost(P, *G);
+                                    << ", cost: " << new_cost;
 
             utils::print_paths(P, *G);
+            bool dup_edges;
+            dup_edges = utils::has_duplicate_edge_ids(utils::flatten(P, *G), *G);
+            BOOST_LOG_TRIVIAL(debug) << "duplicate edges in solution: "
+                                     << dup_edges;
             utils::invert_edges(utils::translate_edge_sets(P,*G_c),
                                 true,
                                 true,
@@ -221,6 +240,18 @@ bp::list Ksp::run(){
 
             utils::print_all(*G_c);
             utils::print_all(*G);
+
+            if(min_cost && (new_cost > cost)){
+                BOOST_LOG_TRIVIAL(info) << "Reached minimum at l= " << l-1;
+                return utils::edgeSets_to_list(P_prev,
+                                               *G);
+
+            }
+            else{
+              P_prev = P;
+              cost = new_cost;
+
+            }
         }
         else{
             BOOST_LOG_TRIVIAL(info) << "Stopped at l= " << l-1;

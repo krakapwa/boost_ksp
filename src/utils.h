@@ -124,22 +124,16 @@ namespace utils {
                                   const MyGraph & g);
 
     double calc_cost(EdgeSets P, const MyGraph & g);
-
-    EdgeSet append_path(EdgeSet p,
+    EdgeSet append_edge(EdgeSet p,
                         EdgeSet p_app,
                         Vertex start,
-                        Vertex sink,
                         const MyGraph & g);
 
-    EdgeSet build_p_from_self_or_store(Edge start_edge,
-                                           EdgeSet store,
-                                           int label_p,
-                                           Vertex sink_vertex,
-                                           const MyGraph & g);
 
     bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g);
 
     EdgeSets augment(EdgeSets P_l,
+                     EdgeSet p_cut,
                      EdgeSet p_inter,
                      Vertex sink_vertex,
                      MyGraph & g,
@@ -148,13 +142,19 @@ namespace utils {
 
     bool has_duplicate_vertex_ids(const MyGraph & g);
     bool has_duplicate_edge_ids(const MyGraph & g);
+    bool has_duplicate_edge_ids(EdgeSet p, const MyGraph & g);
     int num_edges_with_label(const MyGraph & g, int label);
     EdgeSet out_edges_with_label(Vertex v, int label, const MyGraph & g);
     EdgeSet out_edges_with_neg_label(Vertex v, const MyGraph & g);
     EdgeSet out_edges_with_neg_label(Vertex v, EdgeSet& s, const MyGraph & g);
     Edge first_out_edge(Vertex v, EdgeSet& s,const MyGraph & g);
 
+    Edge last_out_edge(Vertex v, EdgeSet& s,
+                                           const MyGraph & g);
     EdgeSet flatten(EdgeSets & P, const MyGraph& g);
+
+    EdgeSet out_edges_with_label(Vertex v, int label, EdgeSet & s,
+                                 const MyGraph & g);
 }
 
 #endif
