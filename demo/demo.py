@@ -1,5 +1,6 @@
 from boostksp import libksp
 
+
 source_ind = 0
 sink_ind = 1
 
@@ -8,16 +9,10 @@ nodes = {'a': source_ind,
 
 inv_nodes = {v: k for k, v in nodes.items()}
 
-g = libksp.Ksp()
-#g.set_source(source_ind, 'a')
-#g.set_sink(sink_ind, 'z')
-g.config(source_ind,
-         sink_ind,
-         source_vertex_name="source",
-         sink_vertex_name="sink",
-         log_level="trace",
-         min_cost=False)
-#g.set_loglevel(3)
+g = libksp.ksp()
+g.config(source_vertex_id=0,
+         sink_vertex_id=1,
+         loglevel='debug')
 
 edges = list()
 id_e = 0
@@ -47,6 +42,9 @@ edges.append((nodes['g'], nodes['z'], 2, id_e, 'g', 'z'))
 id_e += 1
 edges.append((nodes['c'], nodes['g'], 1, id_e, 'c', 'g'))
 id_e += 1
+
+g.set_source(source_ind, 'a')
+g.set_sink(sink_ind, 'z')
 
 for e in edges:
     g.add_edge(*e)

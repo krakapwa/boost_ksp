@@ -17,9 +17,12 @@
  * Contributor(s): Laurent Lejeune (laurent.lejeune@artorg.unibe.ch).
  *
  */
+#include "ksp.h"
 
+Ksp::Ksp() {
 
-#include "boost_ksp.h"
+    new_graph();
+}
 
 void Ksp::config(int source_vertex_id,
                  int sink_vertex_id,
@@ -31,7 +34,12 @@ void Ksp::config(int source_vertex_id,
 
     set_source(source_vertex_id, source_vertex_name);
     set_sink(sink_vertex_id, sink_vertex_name);
-    l_max = a_l_max;
+
+    if(a_l_max == -1)
+        l_max = std::numeric_limits<int>::max();
+    else
+      l_max = a_l_max;
+
     set_loglevel(loglevel);
     min_cost = a_min_cost;
 }
@@ -63,9 +71,9 @@ void Ksp::set_sink(int id, std::string name)
     sink_vertex = utils::add_vertex(*G, id, name);
 }
 
-void Ksp::new_graph(int a_n_vertices=0){
+void Ksp::new_graph(){
 
-    n_vertices = a_n_vertices;
+    n_vertices = 0;
     G = new MyGraph(n_vertices);
     (*G)[graph_bundle].name = "defaultName";
     BOOST_LOG_TRIVIAL(info) << "Creating graph with n_vertices: " <<
@@ -103,7 +111,6 @@ bp::list Ksp::run(){
 
     // Make copies of graph
     G_c = new MyGraph(0);
-    G_l = new MyGraph(0);
 
     copy_graph(*G, *G_c);
     (*G_c)[graph_bundle].name = (*G)[graph_bundle].name + "_cost_transform";

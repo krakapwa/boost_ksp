@@ -43,7 +43,7 @@ file(GLOB SRC
 
 message("Source files: " ${SRC} )
 
-ADD_LIBRARY(ksp SHARED ksp.h ${SRC} ksp.cpp )
+ADD_LIBRARY(ksp SHARED ${SRC} pyksp.cpp )
 TARGET_LINK_LIBRARIES(ksp ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
