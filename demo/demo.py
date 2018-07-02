@@ -10,9 +10,10 @@ nodes = {'a': source_ind,
 inv_nodes = {v: k for k, v in nodes.items()}
 
 g = libksp.ksp()
-g.config(source_vertex_id=0,
-         sink_vertex_id=1,
-         loglevel='debug')
+g.config(0,
+         1,
+         loglevel='info',
+         min_cost=False)
 
 edges = list()
 id_e = 0

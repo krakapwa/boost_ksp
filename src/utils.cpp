@@ -533,16 +533,8 @@ namespace utils{
             print_edge(curr_edge, g);
         }
 
-        //BOOST_LOG_TRIVIAL(debug) << "P_l_clean";
-        //print_path(P_l_clean, g);
-        BOOST_LOG_TRIVIAL(debug) << "are P_l_clean labels sorted: "
-                                << P_l_clean.are_label_sorted();
-        BOOST_LOG_TRIVIAL(debug) << "sorting P_l_clean";
         P_l_clean.sort_descend_labels();
-        BOOST_LOG_TRIVIAL(debug) << "sorting done";
-        BOOST_LOG_TRIVIAL(debug) << "are P_l_clean labels sorted: "
-                                << P_l_clean.are_label_sorted();
-        BOOST_LOG_TRIVIAL(debug) << "setting labels on last path of P_l_plus_1";
+
         set_label(p_, g, -(P_l.size()-1));
 
         int label_p;

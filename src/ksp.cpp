@@ -164,10 +164,6 @@ bp::list Ksp::run(){
             // Check costs for minima
         }
 
-        //for(unsigned int i=0; i<P.size(); ++i)
-        //    utils::set_label(P[i], *G, -(i+1));
-        //BOOST_LOG_TRIVIAL(debug) << "setting labels on past solutions";
-
         cost_transform(res_distance, *G_c, *G_c);
         BOOST_LOG_TRIVIAL(debug) << "done cost_transform";
         utils::print_all(*G_c);
@@ -210,7 +206,8 @@ bp::list Ksp::run(){
                                    *G);
             }
             else{
-                P.insert(P.end(), p_inter);
+                P.push_back(p_inter);
+                utils::set_label(p_inter, *G, -P.size());
             }
             new_cost = utils::calc_cost(P, *G);
             BOOST_LOG_TRIVIAL(info) << "l: " << l
