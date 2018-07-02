@@ -147,8 +147,6 @@ bp::list Ksp::run(){
                         true,
                         *G_c);
 
-    utils::set_label(P[0], *G, -1);
-
     BOOST_LOG_TRIVIAL(debug) << "inverted edges on g_c";
     P_prev = P;
 
@@ -159,9 +157,9 @@ bp::list Ksp::run(){
             // Check costs for minima
         }
 
-        for(unsigned int i=0; i<P.size(); ++i)
-            utils::set_label(P[i], *G, -(i+1));
-        BOOST_LOG_TRIVIAL(debug) << "setting labels on past solutions";
+        //for(unsigned int i=0; i<P.size(); ++i)
+        //    utils::set_label(P[i], *G, -(i+1));
+        //BOOST_LOG_TRIVIAL(debug) << "setting labels on past solutions";
 
         cost_transform(res_distance, *G_c, *G_c);
         BOOST_LOG_TRIVIAL(debug) << "done cost_transform";
@@ -202,9 +200,7 @@ bp::list Ksp::run(){
                                    p_cut_g,
                                    p_inter,
                                    sink_vertex,
-                                   *G,
-                                   *G_c,
-                                   *G_l);
+                                   *G);
             }
             else{
                 P.insert(P.end(), p_inter);

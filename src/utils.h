@@ -124,7 +124,7 @@ namespace utils {
                                   const MyGraph & g);
 
     double calc_cost(EdgeSets P, const MyGraph & g);
-    EdgeSet append_edge(EdgeSet p,
+    Edge append_edge(EdgeSet p,
                         EdgeSet p_app,
                         Vertex start,
                         const MyGraph & g);
@@ -136,9 +136,7 @@ namespace utils {
                      EdgeSet p_cut,
                      EdgeSet p_inter,
                      Vertex sink_vertex,
-                     MyGraph & g,
-                     MyGraph & g_c,
-                     MyGraph & g_l);
+                     MyGraph & g);
 
     bool has_duplicate_vertex_ids(const MyGraph & g);
     bool has_duplicate_edge_ids(const MyGraph & g);

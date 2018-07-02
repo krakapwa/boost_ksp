@@ -37,7 +37,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/expressions.hpp>
-
+#include <numeric>
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;
@@ -103,6 +103,20 @@ typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
 typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeVec;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
+
+template<typename T>
+std::vector<std::size_t> idx_desc_sort(const std::vector<T>& v)
+{
+    std::vector<std::size_t> result(v.size());
+    std::iota(std::begin(result), std::end(result), 0);
+    std::sort(std::begin(result), std::end(result),
+            [&v](const auto & lhs, const auto & rhs)
+            {
+                return v[lhs] > v[rhs];
+            }
+    );
+    return result;
+}
 
 struct EdgeSet{
     EdgeVec edges;
@@ -383,6 +397,34 @@ struct EdgeSet{
 
     }
 
+    bool sort_descend_labels(){
+
+        // make label vector
+        std::vector<int> labels;
+        for(unsigned int i=0; i<edges.size(); ++i)
+            labels.push_back((*g)[edges[i]].label);
+
+        // get indices that sort labels in descending order
+        auto idxs = idx_desc_sort(labels);
+
+        EdgeVec new_edges;
+        for(unsigned int i=0; i<idxs.size(); ++i)
+            new_edges.push_back(edges[idxs[i]]);
+
+        edges = new_edges;
+
+        return true;
+    }
+
+    bool are_label_sorted(){
+
+      for(unsigned int i=1; i<edges.size(); ++i)
+        if((*g)[edges[i]].label > (*g)[edges[i-1]].label)
+          return false;
+
+      return true;
+    }
+
     bool has_label(const int & label){
 
       for(unsigned int i=0; i<edges.size(); ++i)
@@ -468,6 +510,10 @@ class LabelSorter{
     public:
         LabelSorter(MyGraph a_g){ g = a_g; }
         bool compareLabels(const Edge e0, const Edge e1, MyGraph g) const{
+
+            BOOST_LOG_TRIVIAL(debug) << "compareLabels (e0, e1): "
+              << g[e0].label << "," << g[e1].label
+            << " return " << (g[e0].label > g[e1].label);
             return g[e0].label > g[e1].label;
         }
         bool operator()(const Edge e0, const Edge e1) const {
@@ -477,4 +523,6 @@ class LabelSorter{
 
 
 typedef std::vector<EdgeSet> EdgeSets;
+
+
 #endif
