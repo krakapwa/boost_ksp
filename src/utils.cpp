@@ -53,7 +53,7 @@ namespace utils{
         Vertex v0 = add_vertex(g, n0, str_0);
         Vertex v1 = add_vertex(g, n1, str_1);
 
-        std::pair<MyGraph::edge_descriptor, bool> e = boost::add_edge(v0, v1, g);
+        std::pair<Edge, bool> e = boost::add_edge(v0, v1, g);
 
         g[e.first].weight = w;
         g[e.first].label = label;
@@ -563,7 +563,6 @@ namespace utils{
                         p_new += curr_edge;
                         P_l_clean -= curr_edge;
                         BOOST_LOG_TRIVIAL(debug) << "end branch to another path";
-
                     }
                     curr_edge = p_new.back();
                     //set_label(curr_edge, g, label_p);

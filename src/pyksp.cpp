@@ -23,15 +23,13 @@ BOOST_PYTHON_MODULE(libksp)
   class_<Ksp>("ksp")
     .def("run",&Ksp::run)
     .def("add_edge", &Ksp::add_edge,
-            add_edge_member_overloads(
-              args("n0",
-                   "n1",
-                   "w",
-                   "id",
-                   "str_0",
-                   "str_1",
-                   "label"),
-              "docstring add_edge"))
+         (bp::arg("n0"),
+          bp::arg("n1"),
+          bp::arg("weight")=0,
+          bp::arg("id")=-1,
+          bp::arg("str0")="",
+          bp::arg("str1")="",
+          bp::arg("label")=1))
     .def("config", &Ksp::config,
          (bp::arg("source_vertex_id"),
           bp::arg("sink_vertex_id"),

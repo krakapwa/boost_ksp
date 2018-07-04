@@ -46,12 +46,12 @@ class Ksp {
 
         void set_loglevel(std::string);
         bool add_edge(int n0,
-                            int n1,
-                            double w,
-                            int id=-1,
-                            std::string str_0="",
-                            std::string str_1="",
-                            int label=1);
+                      int n1,
+                      double w,
+                      int id=-1,
+                      std::string str_0="",
+                      std::string str_1="",
+                      int label=1);
         void remove_edge(int u, int v);
 
         void set_source(int id, std::string str);

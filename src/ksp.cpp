@@ -38,7 +38,7 @@ void Ksp::config(int source_vertex_id,
     if(a_l_max == -1)
         l_max = std::numeric_limits<int>::max();
     else
-      l_max = a_l_max;
+        l_max = a_l_max;
 
     set_loglevel(loglevel);
     min_cost = a_min_cost;
@@ -51,9 +51,23 @@ Vertex Ksp::add_vertex(int id, std::string str){
     return utils::add_vertex(*G, id, str);
 }
 
-void Ksp::remove_edge(int u, int v){
+void Ksp::remove_edge(int u_id, int v_id){
 
-    boost::remove_edge(u, v, *G);
+    Vertex u, v;
+    VertexIter wi, wi_end;
+    for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi){
+        if((*G)[*wi].id == u_id)
+            u = *wi;
+    }
+
+    for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi){
+        if((*G)[*wi].id == v_id)
+            v = *wi;
+    }
+
+    std::pair<Edge, bool> e = boost::edge(u, v, *G);
+    if(e.second)
+        boost::remove_edge(u, v, *G);
 
 }
 
@@ -93,9 +107,9 @@ void Ksp::new_graph(){
     n_vertices = 0;
     G = new MyGraph(n_vertices);
     (*G)[graph_bundle].name = "defaultName";
-    BOOST_LOG_TRIVIAL(info) << "Creating graph with n_vertices: " <<
+    BOOST_LOG_TRIVIAL(debug) << "Creating graph with n_vertices: " <<
         n_vertices;
-    BOOST_LOG_TRIVIAL(info) << "n_edge: " <<
+    BOOST_LOG_TRIVIAL(debug) << "n_edge: " <<
       num_edges();
 
 }
@@ -149,16 +163,16 @@ bp::list Ksp::run(){
     BOOST_LOG_TRIVIAL(debug) << "Checking duplicate edge ids for g";
     BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_edge_ids(*G);
 
-    BOOST_LOG_TRIVIAL(info) << "total num edges: "
+    BOOST_LOG_TRIVIAL(debug) << "total num edges: "
                             << boost::num_edges(*G);
 
-    BOOST_LOG_TRIVIAL(info) << "total num nodes: "
+    BOOST_LOG_TRIVIAL(debug) << "total num nodes: "
                             << boost::num_vertices(*G);
 
-    BOOST_LOG_TRIVIAL(info) << "num edges leaving source: "
+    BOOST_LOG_TRIVIAL(debug) << "num edges leaving source: "
                             << boost::out_degree(source_vertex, *G);
 
-    BOOST_LOG_TRIVIAL(info) << "num edges entering sink: "
+    BOOST_LOG_TRIVIAL(debug) << "num edges entering sink: "
                             << boost::in_degree(sink_vertex, *G);
 
     double tmp = 0;
@@ -167,12 +181,11 @@ bp::list Ksp::run(){
         ei != ei_end; ++ei) {
       tmp += (*G)[*ei].weight;
     }
-    BOOST_LOG_TRIVIAL(info) << "total cost: "
+    BOOST_LOG_TRIVIAL(debug) << "total cost: "
                             << tmp;
 
-    BOOST_LOG_TRIVIAL(info) << "graph: ";
+    BOOST_LOG_TRIVIAL(debug) << "graph: ";
     utils::print_all(*G);
-
 
     BOOST_LOG_TRIVIAL(debug) << "Bellman-Ford...";
     std::tie(res_path, res_ok, res_distance) =
@@ -298,15 +311,15 @@ bp::list Ksp::run(){
         else{
             BOOST_LOG_TRIVIAL(info) << "Stopped at l= " << l-1;
 
-            if(return_edges)
-              return utils::edgeSets_to_edges_list(P,
-                                                   *G);
-            else // TODO case for return vertices
-              return utils::edgeSets_to_edges_list(P,
-                                                   *G);
+            break;
         }
     }
-    return bp::list();
+    // Re-initialize edge labels
+    BOOST_LOG_TRIVIAL(debug) << "setting all labels to 1";
+    utils::set_label_to_all(*G, 1);
+
+    return utils::edgeSets_to_edges_list(P,
+                                        *G);
 }
 
 std::tuple<EdgeSet, bool, std::vector<double>>
