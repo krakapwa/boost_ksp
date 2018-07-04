@@ -13,11 +13,14 @@ message("Include dirs of Python: " ${PYTHON_INCLUDE_DIRS} )
 message("Libs of Python: " ${PYTHON_LIBRARIES} )
 
 IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE "DEBUG")
-  #SET(CMAKE_BUILD_TYPE "RELEASE")
+  SET(CMAKE_BUILD_TYPE "RELEASE")
   #SET(CMAKE_BUILD_TYPE "RELWITHDEBINFO")
   #SET(CMAKE_BUILD_TYPE "MINSIZEREL")
 ENDIF()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 find_package( Boost 1.58.0 COMPONENTS python3 numpy3 log REQUIRED )
 message("Include dirs of Boost: " ${Boost_INCLUDE_DIRS} )

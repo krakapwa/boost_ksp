@@ -45,7 +45,6 @@ namespace utils {
     std::tuple<VertexPath,bool> pred_to_path(std::vector<std::size_t> preds,
                                             const MyGraph & g, Vertex source,
                                             Vertex sink);
-    void print_path(VertexPath path, const MyGraph & g);
     void print_path(EdgeSet path, const MyGraph & g);
     void print_paths(EdgeSets paths, const MyGraph & g);
     void print_all(const MyGraph & g);
@@ -124,13 +123,12 @@ namespace utils {
                                   const MyGraph & g);
 
     double calc_cost(EdgeSets P, const MyGraph & g);
-    Edge append_edge(EdgeSet p,
-                        EdgeSet p_app,
-                        Vertex start,
-                        const MyGraph & g);
+    Edge append_edge(EdgeSet p_app,
+                     Vertex start,
+                     const MyGraph & g);
 
 
-    bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g);
+    bp::list edgeSets_to_edges_list(EdgeSets P, const MyGraph & g);
 
     EdgeSets augment(EdgeSets P_l,
                      EdgeSet p_cut,

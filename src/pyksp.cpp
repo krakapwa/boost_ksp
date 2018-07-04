@@ -43,5 +43,9 @@ BOOST_PYTHON_MODULE(libksp)
     .def("set_loglevel",&Ksp::set_loglevel)
     .def("set_source",&Ksp::set_source)
     .def("set_sink",&Ksp::set_sink)
+    .def("remove_edge",&Ksp::remove_edge)
+    .def("set_label_all_edges",&Ksp::set_label_all_edges)
+    .def("num_edges",&Ksp::num_edges)
+    .def("num_vertices",&Ksp::num_vertices)
     ;
 }

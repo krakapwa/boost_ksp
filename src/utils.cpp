@@ -97,17 +97,6 @@ namespace utils{
         return std::make_tuple(path, ok);
     }
 
-    void print_path(VertexPath path, const MyGraph & g){
-
-        //This prints the path reversed use reverse_iterator and rbegin/rend
-        VertexPath::reverse_iterator it;
-        //IndexMap index = get(vertex_index, g);
-        for (it=path.rbegin(); it != path.rend(); ++it) {
-            std::cout << *it << " ";
-        }
-        std::cout << std::endl;
-    }
-
     void print_edge(Edge e, const MyGraph & g){
         BOOST_LOG_TRIVIAL(debug) << "(" << g[source(e, g)].name
                                  << ","
@@ -363,10 +352,9 @@ namespace utils{
 
     // This function is called when interlacing occurs.
     // One edge of p_app is returned
-    Edge append_edge(EdgeSet p,
-                     EdgeSet p_app,
-                     Vertex start,
-                     const MyGraph & g){
+    Edge append_edge(EdgeSet p_app,
+                    Vertex start,
+                    const MyGraph & g){
 
         // Find index of start in p_app
         unsigned int ind_start = find_ind_edge_starting_with(p_app,
@@ -459,7 +447,7 @@ namespace utils{
 
     // Returns the total cost of edge sets
     double calc_cost(EdgeSets P, const MyGraph & g){
-        double cost;
+        double cost = 0;
 
         for(unsigned int i=0; i<P.size(); ++i){
             for(unsigned int j=0; j<P[i].size(); ++j){
@@ -470,8 +458,8 @@ namespace utils{
         return cost;
     }
 
-    // Convert to python list
-    bp::list edgeSets_to_list(EdgeSets P, const MyGraph & g){
+    // Convert to python list with edges ids
+    bp::list edgeSets_to_edges_list(EdgeSets P, const MyGraph & g){
 
         bp::list array;
         for (unsigned int i = 0; i < P.size(); i++){
@@ -484,6 +472,7 @@ namespace utils{
 
         return array;
     }
+
 
     EdgeSets augment(EdgeSets P_l,
                      EdgeSet p_cut,
@@ -511,8 +500,7 @@ namespace utils{
             curr_vertex = target(curr_edge, g);
             if(p_inter.has_out_vertex(curr_vertex)){
                 BOOST_LOG_TRIVIAL(debug) << "append inter";
-                curr_edge = append_edge(p_,
-                                        p_inter,
+                curr_edge = append_edge(p_inter,
                                         curr_vertex,
                                         g);
                 // remove all edges that have been interlaced
@@ -558,8 +546,7 @@ namespace utils{
                 if(edges_self.size() == 0){
                     if(p_inter.has_out_vertex(curr_vertex)){
                         BOOST_LOG_TRIVIAL(debug) << "append inter";
-                        curr_edge = append_edge(p_new,
-                                                p_inter,
+                        curr_edge = append_edge(p_inter,
                                                 curr_vertex,
                                                 g);
                         // remove all edges that have been interlaced

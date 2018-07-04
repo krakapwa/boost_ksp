@@ -52,9 +52,14 @@ class Ksp {
                             std::string str_0="",
                             std::string str_1="",
                             int label=1);
+        void remove_edge(int u, int v);
 
         void set_source(int id, std::string str);
         void set_sink(int id, std::string str);
+        void set_label_all_edges(int label);
+        int num_vertices();
+        int num_edges();
+
 
         bp::list run();
 
@@ -70,13 +75,10 @@ class Ksp {
         int l_max;
 
         bool min_cost;
+        bool return_edges;
 
         double cost;
         double new_cost; // will store two consecutives costs for comparison
-
-
-
-
 
         void new_graph();
 
@@ -85,10 +87,10 @@ class Ksp {
         bellman_ford_shortest_paths(const MyGraph & g);
 
         std::tuple<EdgeSet, bool, std::vector<double>>
-        dijkstra_shortest_paths(const MyGraph & g, int sink_id);
+        dijkstra_shortest_paths(const MyGraph & g, Vertex source_vertex);
 
         void cost_transform(const std::vector<double> & distance,
-                            const MyGraph & g_in, MyGraph & g_out);
+                            MyGraph & g_out);
 
         std::string hello() { return "Just nod if you can hear me!"; }
 
