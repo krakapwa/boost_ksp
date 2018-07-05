@@ -31,6 +31,15 @@ void Ksp::config(int source_vertex_id,
                  std::string sink_vertex_name,
                  std::string loglevel,
                  bool a_min_cost){
+    /* Define:
+       - source_vertex_id: id of source vertex
+       - sink_vertex_id: id of source vertex
+       - l_max: Max number of paths to compute. -1 for no limit
+       - source_vertex_name: Name of source vertex (optional)
+       - sink_vertex_name: Name of sink vertex (optional)
+       - loglevel: What to print? (see globals.h)
+       - min_cost: False for saturation of graph. True to stop at minimum cost
+     */
 
     set_source(source_vertex_id, source_vertex_name);
     set_sink(sink_vertex_id, sink_vertex_name);
@@ -139,8 +148,9 @@ void Ksp::set_loglevel(std::string a_log_level) {
 }
 
 bp::list Ksp::run(){
+    // Runs the edge-disjoint K-shortest path
 
-    // Make copies of graph
+    // Make copy of graph for cost transformation
     G_c = new MyGraph(0);
 
     copy_graph(*G, *G_c);
@@ -155,8 +165,6 @@ bp::list Ksp::run(){
     EdgeSets P;
     EdgeSets P_prev;
 
-    //int l_max = std::numeric_limits<int>::max();
-    //int l_max = 3;
     BOOST_LOG_TRIVIAL(debug) << "Checking duplicate vertex ids for g";
     BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_vertex_ids(*G);
 
@@ -215,9 +223,6 @@ bp::list Ksp::run(){
     for(int l = 1; l < l_max; ++l){
 
         EdgeSet p_cut(*G);
-        if(l != 0){
-            // Check costs for minima
-        }
 
         cost_transform(res_distance, *G_c);
         BOOST_LOG_TRIVIAL(debug) << "done cost_transform";
@@ -226,7 +231,7 @@ bp::list Ksp::run(){
         std::tie(p_inter, res_ok, res_distance) =
             dijkstra_shortest_paths(*G_c, source_vertex);
 
-        // p_cut are invalid edges, i.e. will be excluded from augmentation
+        // p_cut are invalid edges, i.e. will be excluded from augmentation set
         p_cut = p_inter.convert_to_graph(*G);
         BOOST_LOG_TRIVIAL(debug) << "p_inter:";
         utils::print_path(p_inter, *G);
@@ -245,6 +250,8 @@ bp::list Ksp::run(){
         if(res_ok){
             BOOST_LOG_TRIVIAL(debug) << "ok...";
 
+            // If interlacing path didn't cut edges of previous solution,
+            // add path as is, else augment
             if(p_cut.size() > 0){
                 utils::set_label_to_invalid_edges(p_cut, *G_c, *G, 0, true);
                 BOOST_LOG_TRIVIAL(debug) << "num invalid edges (cut) : "
@@ -278,7 +285,7 @@ bp::list Ksp::run(){
                                 true,
                                 *G_c);
 
-            // set label=1 and re-invert edges on p_cut
+            // set label=1 and invert back edges of p_cut
             Edge e;
             Vertex u, v;
             for(unsigned int i=0; i<p_cut.size(); ++i){
@@ -314,6 +321,7 @@ bp::list Ksp::run(){
             break;
         }
     }
+
     // Re-initialize edge labels
     BOOST_LOG_TRIVIAL(debug) << "setting all labels to 1";
     utils::set_label_to_all(*G, 1);
