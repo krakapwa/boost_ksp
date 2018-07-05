@@ -66,10 +66,10 @@ struct GraphProperty{
 
 struct EdgeProperty{
     float weight;
-    int label;
-    int id;
+    int label; // used during optimization
+    int id; // will return solution as list of ids, make them unique!
     int id_vertex_in;
-    int id_vertex_out;
+    int id_vertex_out; // ids of input and output vertices
 };
 
 struct VertexProperty{
@@ -118,6 +118,7 @@ std::vector<std::size_t> idx_desc_sort(const std::vector<T>& v)
     return result;
 }
 
+// We'll make extensive use of edge sets
 struct EdgeSet{
     EdgeVec edges;
     const MyGraph * g;
@@ -349,7 +350,6 @@ struct EdgeSet{
         }
 
         return false;
-
     }
 
     bool has_edge(const Edge & e){
@@ -368,7 +368,6 @@ struct EdgeSet{
                 return true;
         }
         return false;
-
     }
 
     EdgeSet & remove_label(const int & label){
@@ -398,6 +397,7 @@ struct EdgeSet{
     }
 
     bool sort_descend_labels(){
+        // sort edges in descending order according to their label
 
         // make label vector
         std::vector<int> labels;
@@ -417,6 +417,7 @@ struct EdgeSet{
     }
 
     bool are_label_sorted(){
+        // are edges sorted in descending order according to their label?
 
       for(unsigned int i=1; i<edges.size(); ++i)
         if((*g)[edges[i]].label > (*g)[edges[i-1]].label)
@@ -426,6 +427,7 @@ struct EdgeSet{
     }
 
     bool has_label(const int & label){
+        // Is there an edge with that label?
 
       for(unsigned int i=0; i<edges.size(); ++i)
         if((*g)[edges[i]].label == label)
@@ -435,6 +437,9 @@ struct EdgeSet{
     }
 
     EdgeSet convert_to_graph(const MyGraph & new_g){
+        // Convert edge descriptors to new graph
+        // In place conversion of valid edges
+        // Returns invalid edges
 
         EdgeSet p_valid(new_g);
         EdgeSet p_invalid(*g);
@@ -462,6 +467,9 @@ struct EdgeSet{
     std::pair<Edge,bool> convert_edge(Edge e,
                                       const MyGraph & g_p,
                                       bool inv_mode){
+        // Convert edge to new graph
+        // In place conversion
+
         std::pair<Edge, bool> e_out;
         if(inv_mode)
             e_out = edge(target(e, g_p), source(e, g_p), *g);
@@ -473,8 +481,8 @@ struct EdgeSet{
 
 };
 
-// This appends two sets
 inline EdgeSet operator+(const EdgeSet & p0, const EdgeSet & p1) {
+    // Concatenate two sets
 
     EdgeSet p_out(*(p0.g));
     p_out += p0;
@@ -484,6 +492,7 @@ inline EdgeSet operator+(const EdgeSet & p0, const EdgeSet & p1) {
 }
 
 inline EdgeSet operator+(const EdgeSet & p0, const Edge& e) {
+    // Concatenate edge e to set p0
 
     EdgeSet p_out(*(p0.g));
     p_out += p0;
@@ -493,6 +502,7 @@ inline EdgeSet operator+(const EdgeSet & p0, const Edge& e) {
 }
 
 inline EdgeSet operator-(EdgeSet p0, EdgeSet p1) {
+    // Set substraction
 
     EdgeSet p_out(*(p0.g));
     p_out += p0;
