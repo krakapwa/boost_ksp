@@ -130,6 +130,12 @@ namespace utils {
 
     bp::list edgeSets_to_edges_list(EdgeSets P, const MyGraph & g);
 
+    EdgeSets augment2(EdgeSets P_l,
+                     EdgeSet p_cut,
+                     EdgeSet p_inter,
+                     Vertex sink_vertex,
+                     MyGraph & g);
+
     EdgeSets augment(EdgeSets P_l,
                      EdgeSet p_cut,
                      EdgeSet p_inter,

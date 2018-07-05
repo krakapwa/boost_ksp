@@ -473,8 +473,131 @@ namespace utils{
         return array;
     }
 
-
     EdgeSets augment(EdgeSets P_l,
+                     EdgeSet p_cut,
+                     EdgeSet p_inter,
+                     Vertex sink_vertex,
+                     MyGraph & g){
+
+        // initialize P_l_plus_1 with empty sets
+        EdgeSets P_l_plus_1;
+        EdgeSet P_l_plus_1_flat(g);
+
+        // This stores edges of last run to pick from
+        EdgeSet P_l_clean = flatten(P_l, g) - p_cut;
+        P_l_clean.sort_descend_labels();
+        p_inter -= p_cut;
+
+        // Building p_ from p_inter and store
+        BOOST_LOG_TRIVIAL(debug) << "Building p_ from p_inter and last solution";
+        EdgeSet p_(g);
+
+        Edge curr_edge = p_inter[0];
+        Vertex curr_vertex;
+        p_ += curr_edge;
+        print_edge(curr_edge, g);
+        while(target(curr_edge, g) != sink_vertex){
+            curr_vertex = target(curr_edge, g);
+            if(p_inter.has_out_vertex(curr_vertex)){
+                BOOST_LOG_TRIVIAL(debug) << "append inter";
+                curr_edge = append_edge(p_inter,
+                                        curr_vertex,
+                                        g);
+                // remove all edges that have been interlaced
+                BOOST_LOG_TRIVIAL(debug) << "remove interlaced edges";
+
+                // clean p_inter
+                p_inter -= curr_edge;
+
+            }
+            else{
+                BOOST_LOG_TRIVIAL(debug) << "pick from last solution set";
+                curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
+                P_l_clean -= curr_edge;
+
+            }
+            p_ += curr_edge;
+            curr_edge = p_.back();
+            print_edge(curr_edge, g);
+        }
+
+        P_l_clean.sort_descend_labels();
+
+        set_label(p_, g, 0);
+
+        int label_p;
+        EdgeSet edges_self(g);
+        for(auto p : boost::adaptors::reverse(P_l)){
+            if(!p.has_label(0)){ // ok (not cut by p_inter)
+                set_label(p, g, 0);
+                P_l_plus_1.insert(P_l_plus_1.begin(), p);
+            }
+            else{
+                label_p = g[p[0]].label; // we are tracking this label
+                Edge curr_edge = p[0];
+                EdgeSet p_new(g);
+                p_new += curr_edge;
+                P_l_clean -= curr_edge;
+                while(target(curr_edge, g) != sink_vertex){
+                    BOOST_LOG_TRIVIAL(debug) << "are P_l_clean labels sorted: "
+                                                << P_l_clean.are_label_sorted();
+                    BOOST_LOG_TRIVIAL(debug) << "label: " << label_p;
+                    curr_vertex = target(curr_edge, g);
+                    edges_self = out_edges_with_label(curr_vertex,
+                                                    label_p,
+                                                    P_l_clean,
+                                                    g);
+                    //append inter or branch to other path
+                    if(edges_self.size() == 0){
+                        if(p_inter.has_out_vertex(curr_vertex)){
+                            BOOST_LOG_TRIVIAL(debug) << "append inter";
+                            curr_edge = append_edge(p_inter,
+                                                    curr_vertex,
+                                                    g);
+                            // remove all edges that have been interlaced
+                            BOOST_LOG_TRIVIAL(debug) << "remove interlaced edges";
+
+                            // clean p_inter
+                            p_new += curr_edge;
+                            p_inter -= curr_edge;
+                            P_l_clean -= curr_edge;
+                        }
+                        else{
+                            BOOST_LOG_TRIVIAL(debug) << "branch to another path";
+                            curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
+                            //curr_edge = first_out_edge(curr_vertex, P_l_clean, g);
+                            p_new += curr_edge;
+                            P_l_clean -= curr_edge;
+                            BOOST_LOG_TRIVIAL(debug) << "end branch to another path";
+                        }
+                        curr_edge = p_new.back();
+                        //set_label(curr_edge, g, label_p);
+                    }
+                    else{ //follow myself
+                        curr_edge = edges_self[0];
+                        p_new += curr_edge;
+                        P_l_clean -= curr_edge;
+                    }
+
+                    print_edge(curr_edge, g);
+                }
+                set_label(p_new, g, 0);
+                P_l_plus_1.insert(P_l_plus_1.begin(), p_new);
+            }
+        }
+
+        BOOST_LOG_TRIVIAL(debug) << "done augmenting l paths";
+        P_l_plus_1.push_back(p_);
+
+        BOOST_LOG_TRIVIAL(debug) << "settings labels to all";
+        for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
+          set_label(P_l_plus_1[i], g, -(i+1));
+
+
+        return P_l_plus_1;
+    }
+
+    EdgeSets augment2(EdgeSets P_l,
                      EdgeSet p_cut,
                      EdgeSet p_inter,
                      Vertex sink_vertex,
