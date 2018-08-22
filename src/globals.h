@@ -41,20 +41,18 @@
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;
-namespace logging = boost::log;
+namespace bl = boost::log;
 
 using namespace boost;
 
-namespace boost::trivial{
-    enum logSeverityLevel
-    {
-        trace, //5
-        debug, //4
-        info, //3
-        warning, //2
-        error //1
-    };
-}
+enum logSeverityLevel
+{
+trace, //5
+debug, //4
+info, //3
+warning, //2
+error //1
+};
 
 enum edge_myweight_t { edge_myweight };
 enum edge_label_t { edge_label };

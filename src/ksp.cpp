@@ -125,7 +125,7 @@ void Ksp::new_graph(){
 
 void Ksp::set_loglevel(std::string a_log_level) {
 
-    using namespace boost::trivial;
+    using namespace boost::log::trivial;
     logSeverityLevel log_level;
 
     if(a_log_level == "trace")
@@ -141,9 +141,9 @@ void Ksp::set_loglevel(std::string a_log_level) {
     else
         log_level = logSeverityLevel::info;
 
-    logging::core::get()->set_filter
+    boost::log::core::get()->set_filter
         (
-            logging::trivial::severity >= log_level
+            boost::log::trivial::severity >= log_level
         );
 }
 

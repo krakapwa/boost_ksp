@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-find_package( Boost 1.58.0 COMPONENTS python3 numpy3 log REQUIRED )
+find_package( Boost 1.63.0 COMPONENTS python3 numpy3 log REQUIRED )
 message("Include dirs of Boost: " ${Boost_INCLUDE_DIRS} )
 message("Libs of Boost: " ${Boost_LIBRARIES} )
 
