@@ -8,6 +8,6 @@ setup(
     author_email='laurent.lejeune@artorg.unibe.ch',
     description='boost ksp',
     packages=['boostksp'],
-    package_dir={'boostksp': '${CMAKE_CURRENT_BINARY_DIR}'},
+    package_dir={'boostksp': '${CMAKE_CURRENT_BINARY_DIR}/boostksp'},
     package_data = {'boostksp': ['libksp.so']}
 )
