@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-
+set (CMAKE_CXX_STANDARD 14)
 set( PACKAGE_VERSION 0.1)
 
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -73,7 +73,6 @@ add_custom_command(OUTPUT ${OUTPUT}
 		COMMAND ${CMAKE_COMMAND} -E copy
 			"${CMAKE_CURRENT_SOURCE_DIR}/boostksp/__init__.py"
 			"${CMAKE_CURRENT_BINARY_DIR}/boostksp/__init__.py"
-	       COMMAND ${PYTHON} ${SETUP_PY} build
 	       COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}
 	       DEPENDS ${DEPS})
 
