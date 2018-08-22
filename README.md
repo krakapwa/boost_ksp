@@ -14,10 +14,8 @@ mkdir build
 cd build
 cmake ..
 make
-make install
+python3 src/setup.py install
 ```
-
-The install command runs pip install -e
 
 ## Usage
 
