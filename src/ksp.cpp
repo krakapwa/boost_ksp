@@ -30,7 +30,8 @@ void Ksp::config(int source_vertex_id,
                  std::string source_vertex_name,
                  std::string sink_vertex_name,
                  std::string loglevel,
-                 bool a_min_cost){
+                 bool a_min_cost,
+                 bool a_return_edges){
     /* Define:
        - source_vertex_id: id of source vertex
        - sink_vertex_id: id of source vertex
@@ -52,7 +53,7 @@ void Ksp::config(int source_vertex_id,
     set_loglevel(loglevel);
     min_cost = a_min_cost;
 
-    return_edges = true;
+    return_edges = a_return_edges;
 }
 
 
@@ -326,8 +327,11 @@ bp::list Ksp::run(){
     BOOST_LOG_TRIVIAL(debug) << "setting all labels to 1";
     utils::set_label_to_all(*G, 1);
 
-    return utils::edgeSets_to_edges_list(P,
-                                        *G);
+
+    if(return_edges)
+        return utils::edgeSets_to_edges_list(P, *G);
+    else
+        return utils::edgeSets_to_vertices_list(P, *G);
 }
 
 std::tuple<EdgeSet, bool, std::vector<double>>

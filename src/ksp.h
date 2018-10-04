@@ -41,7 +41,8 @@ class Ksp {
                     std::string source_vertex_name,
                     std::string sink_vertex_name,
                     std::string loglevel,
-                    bool min_cost);
+                    bool min_cost,
+                    bool return_edges);
         Vertex add_vertex(int id, std::string str);
 
         void set_loglevel(std::string);

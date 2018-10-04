@@ -9,11 +9,13 @@ nodes = {'a': source_ind,
 
 inv_nodes = {v: k for k, v in nodes.items()}
 
+
 g = libksp.ksp()
 g.config(0,
          1,
          loglevel='info',
-         min_cost=False)
+         min_cost=False,
+         return_edges=True)
 
 edges = list()
 id_e = 0

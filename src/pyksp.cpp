@@ -37,7 +37,8 @@ BOOST_PYTHON_MODULE(libksp)
           bp::arg("source_vertex_name")="source",
           bp::arg("sink_vertex_name")="sink",
           bp::arg("loglevel")="info",
-          bp::arg("min_cost")=false))
+          bp::arg("min_cost")=false,
+          bp::arg("return_edges")=true))
     .def("set_loglevel",&Ksp::set_loglevel)
     .def("set_source",&Ksp::set_source)
     .def("set_sink",&Ksp::set_sink)

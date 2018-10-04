@@ -488,6 +488,27 @@ namespace utils{
         return array;
     }
 
+    bp::list edgeSets_to_vertices_list(EdgeSets P, const MyGraph & g){
+    // Convert to python list with edges ids
+
+        bp::list array;
+        Vertex u;
+        Vertex v;
+        for (unsigned int i = 0; i < P.size(); i++){
+            boost::python::list temp;
+            for (unsigned int j = 0; j < P[i].size(); j++){
+              //temp.append(g[P[i][j]].id);
+              u = source(P[i][j], g);
+              v = target(P[i][j], g);
+              std::cout << "u: " << g[u].id << ", v: " << g[v].id << std::endl;
+              temp.append(bp::make_tuple<int, int>(g[u].id, g[v].id));
+            }
+            array.append(temp);
+        }
+
+        return array;
+    }
+
     EdgeSets augment(EdgeSets P_l,
                      EdgeSet p_cut,
                      EdgeSet p_inter,
