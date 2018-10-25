@@ -56,9 +56,69 @@ void Ksp::config(int source_vertex_id,
     return_edges = a_return_edges;
 }
 
+void Ksp::print_all(){
+  utils::print_all(*G);
+}
 
 Vertex Ksp::add_vertex(int id, std::string str){
     return utils::add_vertex(*G, id, str);
+}
+
+void Ksp::remove_vertex(int u_id){
+    Vertex u;
+    VertexIter wi, wi_end;
+    for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi){
+        if((*G)[*wi].id == u_id){
+            u = *wi;
+            boost::remove_vertex(u, *G);
+            return;
+            }
+    }
+
+}
+
+void Ksp::clear_vertex(int u_id){
+    Vertex u;
+    VertexIter wi, wi_end;
+    for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi){
+        if((*G)[*wi].id == u_id){
+            u = *wi;
+            boost::clear_vertex(u, *G);
+            return;
+            }
+    }
+
+}
+
+bp::list Ksp::out_edges(int u_id){
+
+    bp::list out;
+
+    Vertex u;
+    std::pair<VertexIter, VertexIter> vp;
+    bool found_vertex = false;
+    for (vp = vertices(*G); vp.first != vp.second; ++vp.first)
+      if((*G)[*(vp.first)].id == u_id){
+            u = *(vp.first);
+            found_vertex = true;
+        }
+
+      if(!found_vertex)
+        return out;
+
+    OutEdgeIter ei, ei_end;
+    Vertex source;
+    Vertex target;
+    for(boost::tie(ei, ei_end) = boost::out_edges(u, *G); ei != ei_end; ++ei) {
+        source = boost::source ( *ei, *G );
+        target = boost::target ( *ei, *G );
+
+        out.append(bp::make_tuple<int, int>((*G)[source].id,
+                                            (*G)[target].id));
+    }
+
+    return out;
+
 }
 
 void Ksp::remove_edge(int u_id, int v_id){
@@ -173,20 +233,28 @@ bp::list Ksp::run(){
     BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_edge_ids(*G);
 
     BOOST_LOG_TRIVIAL(debug) << "total num edges: "
-                            << boost::num_edges(*G);
+                             << boost::num_edges(*G);
 
     BOOST_LOG_TRIVIAL(debug) << "total num nodes: "
-                            << boost::num_vertices(*G);
+                             << boost::num_vertices(*G);
 
     BOOST_LOG_TRIVIAL(debug) << "num edges leaving source: "
-                            << boost::out_degree(source_vertex, *G);
+                             << boost::out_degree(source_vertex, *G);
 
     BOOST_LOG_TRIVIAL(debug) << "num edges entering sink: "
-                            << boost::in_degree(sink_vertex, *G);
+                             << boost::in_degree(sink_vertex, *G);
+
+    if(boost::out_degree(source_vertex, *G) == 0 &&
+       boost::in_degree(sink_vertex, *G)
+       ){
+      BOOST_LOG_TRIVIAL(debug) << "no edges leaving source and/or no edges entering sink. Check the graph!";
+      return bp::list();
+    }
+
 
     double tmp = 0;
     MyGraph::edge_iterator ei, ei_end;
-    for (boost::tie(ei, ei_end) = edges(*G);
+   for (boost::tie(ei, ei_end) = edges(*G);
         ei != ei_end; ++ei) {
       tmp += (*G)[*ei].weight;
     }

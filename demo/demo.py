@@ -13,7 +13,7 @@ inv_nodes = {v: k for k, v in nodes.items()}
 g = libksp.ksp()
 g.config(0,
          1,
-         loglevel='info',
+         loglevel='trace',
          min_cost=False,
          return_edges=True)
 
@@ -46,7 +46,7 @@ id_e += 1
 edges.append((nodes['c'], nodes['g'], 1, id_e, 'c', 'g'))
 id_e += 1
 
-g.set_source(source_ind, 'a')
+g.set_source(source_ind, 'y')
 g.set_sink(sink_ind, 'z')
 
 for e in edges:
@@ -54,9 +54,25 @@ for e in edges:
 
 res = g.run()
 
-for k in range(len(res)):
-    print('k={}'.format(k))
-    print('--------------')
-    for e in res[k]:
-        print('({},{})'.format(inv_nodes[edges[e][0]],
-                               inv_nodes[edges[e][1]]))
+
+def print_paths(res, edges, inv_nodes):
+    for k in range(len(res)):
+        print('k={}'.format(k))
+        print('--------------')
+        for e in res[k]:
+            print('({},{})'.format(inv_nodes[edges[e][0]],
+                                inv_nodes[edges[e][1]]))
+
+print_paths(res, edges, inv_nodes)
+
+v = source_ind
+print('out_edges from vertex {}'.format(v))
+print(g.out_edges(v))
+
+print('testing removal of vertex...')
+print('-'*50)
+print('num. vertices before: {}'.format(g.num_vertices()))
+print('num. edges before: {}'.format(g.num_edges()))
+g.remove_vertex(source_ind)
+print('num. vertices after: {}'.format(g.num_vertices()))
+print('num. edges after: {}'.format(g.num_edges()))

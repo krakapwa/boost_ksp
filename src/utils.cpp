@@ -31,7 +31,7 @@ namespace utils{
                 return *(vp.first);
             }
 
-        // addnew vertex
+        // add new vertex
         Vertex res = boost::add_vertex(g);
         g[res].name = str;
         g[res].id = id;
@@ -500,7 +500,7 @@ namespace utils{
               //temp.append(g[P[i][j]].id);
               u = source(P[i][j], g);
               v = target(P[i][j], g);
-              std::cout << "u: " << g[u].id << ", v: " << g[v].id << std::endl;
+              //std::cout << "u: " << g[u].id << ", v: " << g[v].id << std::endl;
               temp.append(bp::make_tuple<int, int>(g[u].id, g[v].id));
             }
             array.append(temp);

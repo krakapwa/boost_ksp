@@ -43,8 +43,13 @@ BOOST_PYTHON_MODULE(libksp)
     .def("set_source",&Ksp::set_source)
     .def("set_sink",&Ksp::set_sink)
     .def("remove_edge",&Ksp::remove_edge)
+    .def("add_vertex",&Ksp::add_vertex)
+    .def("out_edges",&Ksp::out_edges)
+    .def("remove_vertex",&Ksp::remove_vertex)
+    .def("clear_vertex",&Ksp::clear_vertex)
     .def("set_label_all_edges",&Ksp::set_label_all_edges)
     .def("num_edges",&Ksp::num_edges)
     .def("num_vertices",&Ksp::num_vertices)
+    .def("print_all",&Ksp::print_all)
     ;
 }

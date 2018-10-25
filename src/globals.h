@@ -89,7 +89,6 @@ struct VertexProperty{
     }
 };
 
-
 typedef adjacency_list<vecS, vecS, bidirectionalS,
     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
@@ -101,6 +100,7 @@ typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
 typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeVec;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
+typedef graph_traits<MyGraph>::out_edge_iterator OutEdgeIter;
 
 template<typename T>
 std::vector<std::size_t> idx_desc_sort(const std::vector<T>& v)

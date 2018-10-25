@@ -45,6 +45,9 @@ class Ksp {
                     bool return_edges);
         Vertex add_vertex(int id, std::string str);
 
+        void print_all();
+        void remove_vertex(int u_id);
+        void clear_vertex(int u_id);
         void set_loglevel(std::string);
         bool add_edge(int n0,
                       int n1,
@@ -60,6 +63,7 @@ class Ksp {
         void set_label_all_edges(int label);
         int num_vertices();
         int num_edges();
+        bp::list out_edges(int);
 
 
         bp::list run();
