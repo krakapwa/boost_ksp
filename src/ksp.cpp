@@ -395,6 +395,8 @@ bp::list Ksp::run(){
     BOOST_LOG_TRIVIAL(debug) << "setting all labels to 1";
     utils::set_label_to_all(*G, 1);
 
+    // Free memory of G_c
+    delete G_c;
 
     if(return_edges)
         return utils::edgeSets_to_edges_list(P, *G);
