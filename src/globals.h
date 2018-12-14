@@ -89,8 +89,10 @@ struct VertexProperty{
     }
 };
 
-typedef adjacency_list<vecS, vecS, bidirectionalS,
+typedef adjacency_list<vecS, vecS, directedS,
     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
+// typedef adjacency_list<vecS, vecS, directedS,
+//     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
 typedef graph_traits<MyGraph>::edge_descriptor Edge;
@@ -115,6 +117,26 @@ std::vector<std::size_t> idx_desc_sort(const std::vector<T>& v)
     );
     return result;
 }
+
+// Visitor that throw an exception when finishing the destination vertex
+class my_visitor : boost::default_bfs_visitor{
+protected:
+  Vertex destination_vertex_m;
+public:
+  my_visitor(Vertex destination_vertex_l)
+    : destination_vertex_m(destination_vertex_l) {};
+
+  void initialize_vertex(const Vertex &s, const MyGraph &g) const {}
+  void discover_vertex(const Vertex &s, const MyGraph &g) const {}
+  void examine_vertex(const Vertex &s, const MyGraph &g) const {}
+  void examine_edge(const Edge &e, const MyGraph &g) const {}
+  void edge_relaxed(const Edge &e, const MyGraph &g) const {}
+  void edge_not_relaxed(const Edge &e, const MyGraph &g) const {}
+  void finish_vertex(const Vertex &s, const MyGraph &g) const {
+    if (destination_vertex_m == s)
+      throw(2);
+  }
+};
 
 // We'll make extensive use of edge sets
 struct EdgeSet{

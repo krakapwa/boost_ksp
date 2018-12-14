@@ -13,7 +13,7 @@ inv_nodes = {v: k for k, v in nodes.items()}
 g = libksp.ksp()
 g.config(0,
          1,
-         loglevel='trace',
+         loglevel='info',
          min_cost=False,
          return_edges=True)
 

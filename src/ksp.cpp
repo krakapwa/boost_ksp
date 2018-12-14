@@ -226,30 +226,30 @@ bp::list Ksp::run(){
     EdgeSets P;
     EdgeSets P_prev;
 
-    BOOST_LOG_TRIVIAL(debug) << "Checking duplicate vertex ids for g";
-    BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_vertex_ids(*G);
+    // BOOST_LOG_TRIVIAL(debug) << "Checking duplicate vertex ids for g";
+    // BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_vertex_ids(*G);
 
-    BOOST_LOG_TRIVIAL(debug) << "Checking duplicate edge ids for g";
-    BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_edge_ids(*G);
+    // BOOST_LOG_TRIVIAL(debug) << "Checking duplicate edge ids for g";
+    // BOOST_LOG_TRIVIAL(debug) << utils::has_duplicate_edge_ids(*G);
 
-    BOOST_LOG_TRIVIAL(debug) << "total num edges: "
-                             << boost::num_edges(*G);
+    // BOOST_LOG_TRIVIAL(debug) << "total num edges: "
+    //                          << boost::num_edges(*G);
 
-    BOOST_LOG_TRIVIAL(debug) << "total num nodes: "
-                             << boost::num_vertices(*G);
+    // BOOST_LOG_TRIVIAL(debug) << "total num nodes: "
+    //                          << boost::num_vertices(*G);
 
-    BOOST_LOG_TRIVIAL(debug) << "num edges leaving source: "
-                             << boost::out_degree(source_vertex, *G);
+    // BOOST_LOG_TRIVIAL(debug) << "num edges leaving source: "
+    //                          << boost::out_degree(source_vertex, *G);
 
-    BOOST_LOG_TRIVIAL(debug) << "num edges entering sink: "
-                             << boost::in_degree(sink_vertex, *G);
+    // BOOST_LOG_TRIVIAL(debug) << "num edges entering sink: "
+    //                          << boost::in_degree(sink_vertex, *G);
 
-    if(boost::out_degree(source_vertex, *G) == 0 &&
-       boost::in_degree(sink_vertex, *G)
-       ){
-      BOOST_LOG_TRIVIAL(debug) << "no edges leaving source and/or no edges entering sink. Check the graph!";
-      return bp::list();
-    }
+    // if(boost::out_degree(source_vertex, *G) == 0 &&
+    //    boost::in_degree(sink_vertex, *G)
+    //    ){
+    //   BOOST_LOG_TRIVIAL(debug) << "no edges leaving source and/or no edges entering sink. Check the graph!";
+    //   return bp::list();
+    // }
 
 
     double tmp = 0;
@@ -298,7 +298,7 @@ bp::list Ksp::run(){
         utils::print_all(*G_c);
         BOOST_LOG_TRIVIAL(debug) << "Dijkstra...";
         std::tie(p_inter, res_ok, res_distance) =
-            dijkstra_shortest_paths(*G_c, source_vertex);
+          dijkstra_shortest_paths(*G_c, source_vertex, sink_vertex);
 
         // p_cut are invalid edges, i.e. will be excluded from augmentation set
         p_cut = p_inter.convert_to_graph(*G);
@@ -405,7 +405,9 @@ bp::list Ksp::run(){
 }
 
 std::tuple<EdgeSet, bool, std::vector<double>>
-Ksp::dijkstra_shortest_paths(const MyGraph & g, Vertex source_vertex){
+Ksp::dijkstra_shortest_paths(const MyGraph & g,
+                             Vertex source_vertex,
+                             Vertex sink_vertex){
 
     EdgeSet out_path(g);
 
@@ -414,28 +416,39 @@ Ksp::dijkstra_shortest_paths(const MyGraph & g, Vertex source_vertex){
 
     std::vector<std::size_t> predecessors(num_vertices());
 
-    // call to the algorithm
-    //bool r = boost::dijkstra_shortest_paths(
-    boost::dijkstra_shortest_paths(
-        g,
-        source_vertex,
-        weight_map(get(&EdgeProperty::weight, g)).
-        distance_map(make_iterator_property_map(distances.begin(),
-                                                       get(vertex_index,g))).
-        predecessor_map(boost::make_iterator_property_map(predecessors.begin(),
-                                                          get(vertex_index,g)))
-        );
-
-    //print_distances(distance, *G);
+    my_visitor vis(sink_vertex);
 
     VertexPath shortest;
     bool r;
 
-    std::tie(shortest, r) = utils::pred_to_path(predecessors, g,
-                                                source_vertex, sink_vertex);
+    // check if there are out-edge from source
+    if(boost::out_degree(source_vertex, g) == 0){
+      BOOST_LOG_TRIVIAL(debug) << "found no out edges from source...";
+      r = false;
+    }
+    
+    else{
+        try{
+            boost::dijkstra_shortest_paths(
+                g,
+                source_vertex,
+                weight_map(get(&EdgeProperty::weight, g)).
+                predecessor_map(boost::make_iterator_property_map(predecessors.begin(),
+                                                                get(vertex_index,g))).
+                distance_map(make_iterator_property_map(distances.begin(),
+                                                            get(vertex_index,g)))
+                );
+            std::tie(shortest, r) = utils::pred_to_path(predecessors, g,
+                                                        source_vertex, sink_vertex);
+        }
+        catch(int exception){
+            BOOST_LOG_TRIVIAL(debug) << "dijktra failed to visit all nodes";
+        }
+    }
+
 
     if(!r){
-        BOOST_LOG_TRIVIAL(info) << "Couldn't reach sink node";
+        BOOST_LOG_TRIVIAL(debug) << "Couldn't reach sink node";
         out_path = EdgeSet(g);
         r = false;
     }

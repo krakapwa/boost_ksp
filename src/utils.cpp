@@ -206,7 +206,8 @@ namespace utils{
         for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei){
             v_in = source(*ei, g);
             v_out = target(*ei, g);
-            BOOST_LOG_TRIVIAL(trace) << "edge: (" << g[v_in].id << "," <<
+            BOOST_LOG_TRIVIAL(trace) << "desc : " << *ei
+             << " edge: (" << g[v_in].id << "," <<
                 g[v_out].id << ") / (" << g[v_in].name << "," << g[v_out].name <<
                 ") , id: " << g[*ei].id <<
                 ", label: " << g[*ei].label <<
@@ -217,7 +218,8 @@ namespace utils{
                 << num_vertices(g) << ") --------";
         std::pair<VertexIter, VertexIter> vp;
         for (vp = vertices(g); vp.first != vp.second; ++vp.first)
-            BOOST_LOG_TRIVIAL(trace) << "vertex: "
+          BOOST_LOG_TRIVIAL(trace) << "desc: " << *vp.first
+                                    << " id: "
                                     << g[*vp.first].id
                                     << ", name: "
                                     << g[*vp.first].name;

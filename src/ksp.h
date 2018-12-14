@@ -92,7 +92,9 @@ class Ksp {
         bellman_ford_shortest_paths(const MyGraph & g);
 
         std::tuple<EdgeSet, bool, std::vector<double>>
-        dijkstra_shortest_paths(const MyGraph & g, Vertex source_vertex);
+        dijkstra_shortest_paths(const MyGraph & g,
+                                Vertex source_vertex,
+                                Vertex sink_vertex);
 
         void cost_transform(const std::vector<double> & distance,
                             MyGraph & g_out);
