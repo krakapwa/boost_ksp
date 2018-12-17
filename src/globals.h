@@ -58,6 +58,9 @@ enum edge_myweight_t { edge_myweight };
 enum edge_label_t { edge_label };
 enum edge_id_t { edge_id };
 
+typedef long int vertex_id_type ;
+typedef long int edge_id_type;
+
 struct GraphProperty{
     std::string name;
 };
@@ -65,14 +68,14 @@ struct GraphProperty{
 struct EdgeProperty{
     float weight;
     int label; // used during optimization
-    int id; // will return solution as list of ids, make them unique!
-    int id_vertex_in;
-    int id_vertex_out; // ids of input and output vertices
+    edge_id_type id; // will return solution as list of ids, make them unique!
+    vertex_id_type id_vertex_in;
+    vertex_id_type id_vertex_out; // ids of input and output vertices
 };
 
 struct VertexProperty{
     std::string name;
-    int id;
+    vertex_id_type id;
 
     bool operator==(VertexProperty v){
         if(id == v.id)
@@ -91,14 +94,13 @@ struct VertexProperty{
 
 typedef adjacency_list<vecS, vecS, directedS,
     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
-// typedef adjacency_list<vecS, vecS, directedS,
+// typedef adjacency_list<vecS, vecS, bidirectionalS,
 //     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
 typedef graph_traits<MyGraph>::edge_descriptor Edge;
 typedef std::vector< graph_traits< MyGraph >::vertex_descriptor > VertexPath;
 
-typedef std::vector<int> IdPath;
 typedef graph_traits< MyGraph >::vertex_descriptor Vertex;
 typedef std::vector< graph_traits< MyGraph >::edge_descriptor > EdgeVec;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
@@ -184,7 +186,7 @@ struct EdgeSet{
                     new_edges.push_back(edges[i]);
             }
             else{
-                BOOST_LOG_TRIVIAL(debug) << "removed 1 edge";
+                BOOST_LOG_TRIVIAL(trace) << "removed 1 edge";
             }
         }
 
@@ -200,7 +202,7 @@ struct EdgeSet{
         return *this;
     }
 
-    Edge& operator[](const int & i) {
+    Edge& operator[](const edge_id_type & i) {
 
         return edges[i];
     }
@@ -361,7 +363,7 @@ struct EdgeSet{
     bool has_out_vertex(const Vertex & u){
 
         EdgeSet::iterator it;
-        int curr_u_id;
+        vertex_id_type curr_u_id;
 
         for (it=begin(); it != end(); ++it) {
             curr_u_id = ((*g)[source(*it, *g)]).id;
@@ -375,10 +377,10 @@ struct EdgeSet{
     bool has_edge(const Edge & e){
 
         EdgeSet::iterator it;
-        int u_id = (*g)[source(e, *g)].id;
-        int v_id = (*g)[target(e, *g)].id;
-        int curr_u_id;
-        int curr_v_id;
+        vertex_id_type u_id = (*g)[source(e, *g)].id;
+        vertex_id_type v_id = (*g)[target(e, *g)].id;
+        vertex_id_type curr_u_id;
+        vertex_id_type curr_v_id;
 
         for (it=begin(); it != end(); ++it) {
             curr_u_id = ((*g)[source(*it, *g)]).id;
@@ -552,7 +554,62 @@ class LabelSorter{
 };
 
 
-typedef std::vector<EdgeSet> EdgeSets;
+struct EdgeSets{
+    std::vector<EdgeSet> sets;
+    using iterator = std::vector<EdgeSet>::iterator;
+    using reverse_iterator = std::vector<EdgeSet>::reverse_iterator;
+
+    EdgeSets(){
+    }
+
+    EdgeSets(const EdgeSets & old){
+      // copy constructor
+      sets.clear();
+      for(unsigned int i=0; i<old.size(); ++i) {
+        this->append(old[i]);
+      }
+    }
+
+    void append(const EdgeSet & new_){
+      sets.push_back(new_);
+    }
+
+    void append(const EdgeSets & new_){
+      for(unsigned int i=0; i<new_.size(); ++i){
+        this->append(new_[i]);
+      }
+    }
+
+    void insert(const EdgeSet & new_){
+      // push new EdgeSet at beginning
+      sets.insert(sets.begin(), new_);
+    }
+
+    unsigned int size() const{
+        return sets.size();
+    }
+
+    EdgeSet operator[](int i) const {
+        return sets[i];
+    }
+
+    iterator begin(){
+        return sets.begin();
+    }
+
+    iterator end(){
+        return sets.end();
+    }
+
+    reverse_iterator rbegin(){
+        return sets.rbegin();
+    }
+
+    reverse_iterator rend(){
+        return sets.rend();
+    }
+
+};
 
 
 #endif

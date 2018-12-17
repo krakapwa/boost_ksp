@@ -4,8 +4,15 @@ from boostksp import libksp
 source_ind = 0
 sink_ind = 1
 
+node_start = int(2)
 nodes = {'a': source_ind,
-         'b': 2, 'c': 3, 'd': 4, 'e': 5, 'f': 6, 'g': 7, 'z': sink_ind}
+         'b': node_start,
+         'c': node_start+1,
+         'd': node_start+2,
+         'e': node_start+3,
+         'f': node_start+4,
+         'g': node_start+5,
+         'z': sink_ind}
 
 inv_nodes = {v: k for k, v in nodes.items()}
 
@@ -13,12 +20,13 @@ inv_nodes = {v: k for k, v in nodes.items()}
 g = libksp.ksp()
 g.config(0,
          1,
-         loglevel='info',
+         loglevel='trace',
+         l_max=10,
          min_cost=False,
          return_edges=True)
 
 edges = list()
-id_e = 0
+id_e = int(0)
 edges.append((nodes['a'], nodes['b'], 1, id_e, 'a', 'b'))
 id_e += 1
 edges.append((nodes['b'], nodes['c'], 1, id_e, 'b', 'c'))
@@ -76,3 +84,4 @@ print('num. edges before: {}'.format(g.num_edges()))
 g.remove_vertex(source_ind)
 print('num. vertices after: {}'.format(g.num_vertices()))
 print('num. edges after: {}'.format(g.num_edges()))
+

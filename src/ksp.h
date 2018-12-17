@@ -35,35 +35,35 @@ class Ksp {
 
     public:
         Ksp();
-        void config(int source_vertex_id,
-                    int sink_vertex_id,
+        void config(vertex_id_type source_vertex_id,
+                    vertex_id_type sink_vertex_id,
                     int l_max,
                     std::string source_vertex_name,
                     std::string sink_vertex_name,
                     std::string loglevel,
                     bool min_cost,
                     bool return_edges);
-        Vertex add_vertex(int id, std::string str);
+        Vertex add_vertex(vertex_id_type id, std::string str);
 
         void print_all();
-        void remove_vertex(int u_id);
-        void clear_vertex(int u_id);
+        void remove_vertex(vertex_id_type u_id);
+        void clear_vertex(vertex_id_type u_id);
         void set_loglevel(std::string);
-        bool add_edge(int n0,
-                      int n1,
+        bool add_edge(vertex_id_type n0,
+                      vertex_id_type n1,
                       double w,
-                      int id=-1,
+                      vertex_id_type id=-1,
                       std::string str_0="",
                       std::string str_1="",
                       int label=1);
-        void remove_edge(int u, int v);
+        void remove_edge(vertex_id_type u, vertex_id_type v);
 
-        void set_source(int id, std::string str);
-        void set_sink(int id, std::string str);
+        void set_source(vertex_id_type id, std::string str);
+        void set_sink(vertex_id_type id, std::string str);
         void set_label_all_edges(int label);
-        int num_vertices();
-        int num_edges();
-        bp::list out_edges(int);
+        vertex_id_type num_vertices();
+        edge_id_type num_edges();
+        bp::list out_edges(vertex_id_type);
 
 
         bp::list run();
@@ -73,7 +73,7 @@ class Ksp {
         MyGraph * G;
         MyGraph * G_c; //with transformed edge costs
 
-        int n_vertices;
+        vertex_id_type n_vertices;
         Vertex source_vertex;
         Vertex sink_vertex;
 

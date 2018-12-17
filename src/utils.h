@@ -29,10 +29,10 @@ namespace utils {
     Vertex add_vertex(MyGraph & g, int id, std::string str);
 
     bool add_edge(MyGraph & g,
-                     int n0,
-                     int n1,
+                     vertex_id_type n0,
+                     vertex_id_type n1,
                      double w,
-                     int id,
+                     edge_id_type id,
                      std::string str_0,
                      std::string str_1,
                      int label);
@@ -52,17 +52,20 @@ namespace utils {
     void invert_edge(Edge e,
                      bool inv_label,
                      bool inv_algebraic_sign,
+                     bool ignore_label_val,
                      MyGraph & g);
 
     void invert_edges(EdgeSet edge_path,
                       bool inv_label,
                       bool inv_algebraic_sign,
+                      bool ignore_label_val,
                       MyGraph & g);
 
 
     void invert_edges(EdgeSets edge_sets,
                       bool inv_label,
                       bool inv_algebraic_sign,
+                      bool ignore_label_val,
                       MyGraph & g);
 
     EdgeSets translate_edge_sets(EdgeSets P,
@@ -110,15 +113,15 @@ namespace utils {
                                  const MyGraph & g,
                                  bool inv_edge);
 
-    int find_ind_edge_starting_with(EdgeSet p,
+    edge_id_type find_ind_edge_starting_with(EdgeSet p,
                                     Vertex v,
                                     const MyGraph & g);
 
-    int find_ind_edge_starting_with(EdgeSet p,
-                                    int v_id,
+    edge_id_type find_ind_edge_starting_with(EdgeSet p,
+                                    vertex_id_type v_id,
                                     const MyGraph & g);
 
-    int find_ind_edge_ending_with(EdgeSet p,
+    edge_id_type find_ind_edge_ending_with(EdgeSet p,
                                   Vertex v,
                                   const MyGraph & g);
 

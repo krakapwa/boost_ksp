@@ -40,27 +40,35 @@ namespace utils{
     }
 
     bool add_edge(MyGraph & g,
-                     int n0,
-                     int n1,
-                     double w,
-                     int id=-1,
-                     std::string str_0="",
-                     std::string str_1="",
-                     int label=1){
+                  vertex_id_type n0,
+                  vertex_id_type n1,
+                  double w,
+                  edge_id_type id=-1,
+                  std::string str_0="",
+                  std::string str_1="",
+                  int label=1){
 
         // Add two vertices
         Vertex v0 = add_vertex(g, n0, str_0);
         Vertex v1 = add_vertex(g, n1, str_1);
 
-        std::pair<Edge, bool> e = boost::add_edge(v0, v1, g);
 
-        g[e.first].weight = w;
-        g[e.first].label = label;
-        g[e.first].id = id;
-        g[e.first].id_vertex_in = n0;
-        g[e.first].id_vertex_out = n1;
+        std::pair<Edge, bool> e;
+        e = boost::edge(v0, v1, g);
 
-        return true;
+        if(!e.second){
+            e = boost::add_edge(v0, v1, g);
+
+            g[e.first].weight = w;
+            g[e.first].label = label;
+            g[e.first].id = id;
+            g[e.first].id_vertex_in = n0;
+            g[e.first].id_vertex_out = n1;
+            return true;
+        }
+        else
+          return false;
+
     }
 
     std::tuple<VertexPath,bool> pred_to_path(std::vector<std::size_t> preds,
@@ -97,7 +105,7 @@ namespace utils{
     }
 
     void print_edge(Edge e, const MyGraph & g){
-        BOOST_LOG_TRIVIAL(debug) << "(" << g[source(e, g)].name
+        BOOST_LOG_TRIVIAL(trace) << "(" << g[source(e, g)].name
                                  << ","
                                  << g[target(e, g)].name << ")"
                                  << "/"
@@ -116,7 +124,7 @@ namespace utils{
     void print_paths(EdgeSets paths, const MyGraph & g){
 
         for(unsigned int i = 0; i < paths.size(); ++i){
-            BOOST_LOG_TRIVIAL(debug) << "path #" << i;
+            BOOST_LOG_TRIVIAL(trace) << "path #" << i;
             print_path(paths[i], g);
         }
     }
@@ -177,7 +185,7 @@ namespace utils{
             }
 
             if(!edge(u,v, g_out).second)
-                BOOST_LOG_TRIVIAL(debug) <<
+                BOOST_LOG_TRIVIAL(trace) <<
                   "set_label_to_invalid_edges: Edge doesnt exist!!!";
 
             g_out[edge(u,v, g_out).first].label = label;
@@ -317,7 +325,7 @@ namespace utils{
         return false;
     }
 
-    int find_ind_edge_ending_with(EdgeSet p,
+    edge_id_type find_ind_edge_ending_with(EdgeSet p,
                                 Vertex v,
                                 const MyGraph & g){
         // Search p for an edge ending with vertex v
@@ -330,12 +338,12 @@ namespace utils{
         return -1;
     }
 
-    int find_ind_edge_starting_with(EdgeSet p,
-                                    int v_id,
+    edge_id_type find_ind_edge_starting_with(EdgeSet p,
+                                    vertex_id_type v_id,
                                     const MyGraph & g){
         // Search p for an edge starting with vertex v with id v_id
 
-      BOOST_LOG_TRIVIAL(debug) << "find_ind_edge_starting_with (int): " << v_id;
+      BOOST_LOG_TRIVIAL(trace) << "find_ind_edge_starting_with (int): " << v_id;
         for(unsigned int i=0; i < p.size(); ++i){
             if(g[source(p[i], g)].id == v_id){
                 return i;
@@ -344,7 +352,7 @@ namespace utils{
         return -1;
     }
 
-    int find_ind_edge_starting_with(EdgeSet p,
+    edge_id_type find_ind_edge_starting_with(EdgeSet p,
                                     Vertex v,
                                     const MyGraph & g){
         // Search p for an edge starting with vertex v
@@ -365,7 +373,7 @@ namespace utils{
         // One edge of p_app is returned
 
         // Find index of start in p_app
-        unsigned int ind_start = find_ind_edge_starting_with(p_app,
+        edge_id_type ind_start = find_ind_edge_starting_with(p_app,
                                                              g[start].id,
                                                              g);
 
@@ -381,8 +389,9 @@ namespace utils{
             EdgeSets P_out;
             for(unsigned int i=0; i<P.size(); ++i){
                 P[i].convert_to_graph(g_new);
-                P_out.push_back(P[i]);
+                P_out.append(P[i]);
             }
+            BOOST_LOG_TRIVIAL(trace) << "translate_edge_sets finished ";
             return P_out;
     }
 
@@ -404,6 +413,7 @@ namespace utils{
     void invert_edge(Edge e,
                      bool inv_label,
                      bool inv_algebraic_sign,
+                     bool ignore_label_val,
                      MyGraph & g){
         // invert edge e. Can invert sign of labels and/or
         // algebraic sign of weight
@@ -411,18 +421,21 @@ namespace utils{
         Vertex u = source(e, g);
         Vertex v = target(e, g);
 
-        //print_edge(e, g);
+        print_edge(e, g);
 
-        if(g[e].label > 0){
+        if(g[e].label > 0 || ignore_label_val){
             double weight = g[e].weight;
             int label = g[e].label;
-            int id = g[e].id;
+            edge_id_type id = g[e].id;
 
             if(inv_algebraic_sign)
                 weight = -weight;
 
             if(inv_label)
                 label = -label;
+
+
+            boost::remove_edge(u, v, g);
 
             add_edge(g,
                     g[v].id,
@@ -433,31 +446,41 @@ namespace utils{
                     g[u].name,
                     label);
 
-            boost::remove_edge(u, v, g);
         }
     }
+
 
     void invert_edges(EdgeSets edge_sets,
                       bool inv_label,
                       bool inv_algebraic_sign,
+                      bool ignore_label_val,
                       MyGraph & g){
         // invert edges on edge_sets. Can invert sign of labels and/or
         // algebraic sign of weight
 
         for(unsigned int i=0; i<edge_sets.size(); ++i){
-            invert_edges(edge_sets[i], inv_label, inv_algebraic_sign, g);
+            invert_edges(edge_sets[i],
+                         inv_label,
+                         inv_algebraic_sign,
+                         ignore_label_val,
+                         g);
         }
     }
 
     void invert_edges(EdgeSet edge_path,
                       bool inv_label,
                       bool inv_algebraic_sign,
+                      bool ignore_label_val,
                       MyGraph & g){
         // invert path edge_path. Can invert sign of labels and/or
         // algebraic sign of weight
 
         for(unsigned int i=0; i<edge_path.size(); ++i){
-            invert_edge(edge_path[i], inv_label, inv_algebraic_sign, g);
+            invert_edge(edge_path[i],
+                        inv_label,
+                        inv_algebraic_sign,
+                        ignore_label_val,
+                        g);
         }
     }
 
@@ -486,6 +509,7 @@ namespace utils{
             }
             array.append(temp);
         }
+        BOOST_LOG_TRIVIAL(debug) << "finished converting to list";
 
         return array;
     }
@@ -541,7 +565,7 @@ namespace utils{
         p_inter -= p_cut;
 
         // Building p_ from p_inter and store
-        BOOST_LOG_TRIVIAL(debug) << "Building p_ from p_inter and last solution";
+        BOOST_LOG_TRIVIAL(trace) << "Building p_ from p_inter and last solution";
         EdgeSet p_(g);
 
         Edge curr_edge = p_inter[0];
@@ -551,19 +575,19 @@ namespace utils{
         while(target(curr_edge, g) != sink_vertex){
             curr_vertex = target(curr_edge, g);
             if(p_inter.has_out_vertex(curr_vertex)){
-                BOOST_LOG_TRIVIAL(debug) << "append inter";
+                BOOST_LOG_TRIVIAL(trace) << "append inter";
                 curr_edge = append_edge(p_inter,
                                         curr_vertex,
                                         g);
                 // remove all edges that have been interlaced
-                BOOST_LOG_TRIVIAL(debug) << "remove interlaced edges";
+                BOOST_LOG_TRIVIAL(trace) << "remove interlaced edges";
 
                 // clean p_inter
                 p_inter -= curr_edge;
 
             }
             else{
-                BOOST_LOG_TRIVIAL(debug) << "pick from last solution set";
+                BOOST_LOG_TRIVIAL(trace) << "pick from last solution set";
                 curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
                 P_l_clean -= curr_edge;
 
@@ -579,21 +603,25 @@ namespace utils{
 
         int label_p;
         EdgeSet edges_self(g);
-        for(auto p : boost::adaptors::reverse(P_l)){
-            if(!p.has_label(0)){ // ok (not cut by p_inter)
-                set_label(p, g, 0);
-                P_l_plus_1.insert(P_l_plus_1.begin(), p);
+        // for(auto p : boost::adaptors::reverse(P_l)){
+        // EdgeSets::reverse_iterator p;
+        // for(p = P_l.rbegin(); p != P_l.rend(); ++p){
+        EdgeSets::reverse_iterator p;
+        for(p = P_l.rbegin(); p != P_l.rend(); ++p){
+          if(!((*p).has_label(0))){ // ok (not cut by p_inter)
+                set_label(*p, g, 0);
+                P_l_plus_1.insert(*p);
             }
             else{
-                label_p = g[p[0]].label; // we are tracking this label
-                Edge curr_edge = p[0];
+              label_p = g[(*p)[0]].label; // we are tracking this label
+              Edge curr_edge = (*p)[0];
                 EdgeSet p_new(g);
                 p_new += curr_edge;
                 P_l_clean -= curr_edge;
                 while(target(curr_edge, g) != sink_vertex){
-                    BOOST_LOG_TRIVIAL(debug) << "are P_l_clean labels sorted: "
+                    BOOST_LOG_TRIVIAL(trace) << "are P_l_clean labels sorted: "
                                                 << P_l_clean.are_label_sorted();
-                    BOOST_LOG_TRIVIAL(debug) << "label: " << label_p;
+                    BOOST_LOG_TRIVIAL(trace) << "label: " << label_p;
                     curr_vertex = target(curr_edge, g);
                     edges_self = out_edges_with_label(curr_vertex,
                                                     label_p,
@@ -602,12 +630,12 @@ namespace utils{
                     //append inter or branch to other path
                     if(edges_self.size() == 0){
                         if(p_inter.has_out_vertex(curr_vertex)){
-                            BOOST_LOG_TRIVIAL(debug) << "append inter";
+                            BOOST_LOG_TRIVIAL(trace) << "append inter";
                             curr_edge = append_edge(p_inter,
                                                     curr_vertex,
                                                     g);
                             // remove all edges that have been interlaced
-                            BOOST_LOG_TRIVIAL(debug) << "remove interlaced edges";
+                            BOOST_LOG_TRIVIAL(trace) << "remove interlaced edges";
 
                             // clean p_inter
                             p_new += curr_edge;
@@ -615,12 +643,12 @@ namespace utils{
                             P_l_clean -= curr_edge;
                         }
                         else{
-                            BOOST_LOG_TRIVIAL(debug) << "branch to another path";
+                            BOOST_LOG_TRIVIAL(trace) << "branch to another path";
                             curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
                             //curr_edge = first_out_edge(curr_vertex, P_l_clean, g);
                             p_new += curr_edge;
                             P_l_clean -= curr_edge;
-                            BOOST_LOG_TRIVIAL(debug) << "end branch to another path";
+                            BOOST_LOG_TRIVIAL(trace) << "end branch to another path";
                         }
                         curr_edge = p_new.back();
                         //set_label(curr_edge, g, label_p);
@@ -634,14 +662,14 @@ namespace utils{
                     print_edge(curr_edge, g);
                 }
                 set_label(p_new, g, 0);
-                P_l_plus_1.insert(P_l_plus_1.begin(), p_new);
+                P_l_plus_1.insert(p_new);
             }
         }
 
-        BOOST_LOG_TRIVIAL(debug) << "done augmenting l paths";
-        P_l_plus_1.push_back(p_);
+        BOOST_LOG_TRIVIAL(trace) << "done augmenting l paths";
+        P_l_plus_1.append(p_);
 
-        BOOST_LOG_TRIVIAL(debug) << "settings labels to all";
+        BOOST_LOG_TRIVIAL(trace) << "settings labels to all";
         for(unsigned int i=0; i<P_l_plus_1.size(); ++i)
           set_label(P_l_plus_1[i], g, -(i+1));
 
@@ -758,7 +786,7 @@ namespace utils{
 
         }
 
-        BOOST_LOG_TRIVIAL(debug) << "first_out_edge: found no edge with in vertex: " << g[v].id;
+        BOOST_LOG_TRIVIAL(trace) << "first_out_edge: found no edge with in vertex: " << g[v].id;
         return *it;
     }
 
@@ -768,12 +796,12 @@ namespace utils{
         EdgeSet::reverse_iterator it;
         for(it=s.rbegin(); it!= s.rend(); ++it){
             if(g[source(*it, g)].id == g[v].id){
-                BOOST_LOG_TRIVIAL(debug) << "last_out_edge: return label: " << g[*it].label;
+                BOOST_LOG_TRIVIAL(trace) << "last_out_edge: return label: " << g[*it].label;
                 return *it;
             }
 
         }
-        BOOST_LOG_TRIVIAL(debug) << "last_out_edge: found no edge with in vertex: " << g[v].id;
+        BOOST_LOG_TRIVIAL(trace) << "last_out_edge: found no edge with in vertex: " << g[v].id;
 
         return *it;
     }
