@@ -177,10 +177,6 @@ void Ksp::new_graph(){
     n_vertices = 0;
     G = new MyGraph(n_vertices);
     (*G)[graph_bundle].name = "defaultName";
-    BOOST_LOG_TRIVIAL(debug) << "Creating graph with n_vertices: " <<
-        n_vertices;
-    BOOST_LOG_TRIVIAL(debug) << "n_edge: " <<
-      num_edges();
 
 }
 
@@ -353,13 +349,17 @@ bp::list Ksp::run(){
             // BOOST_LOG_TRIVIAL(debug) << "duplicate edges in solution: "
             //                          << dup_edges;
             utils::print_all(*G_c);
-            BOOST_LOG_TRIVIAL(debug) << "inverting edges on solution ";
-            utils::invert_edges(utils::translate_edge_sets(P,*G_c),
+            utils::print_path(P.back(), *G);
+            BOOST_LOG_TRIVIAL(debug) << "inverting edges on path: ";
+            P.back().convert_to_graph(*G_c);
+            utils::print_path(P.back(), *G_c);
+            utils::invert_edges(P,
                                 true,
                                 false,
                                 true,
                                 *G_c);
             BOOST_LOG_TRIVIAL(debug) << "inverted edges on solution ";
+            utils::print_all(*G_c);
 
             // set label=1 and invert back edges of p_cut
             Edge e;
@@ -405,18 +405,18 @@ bp::list Ksp::run(){
     }
 
     // Re-initialize edge labels
-    BOOST_LOG_TRIVIAL(info) << "setting all labels to 1";
+    BOOST_LOG_TRIVIAL(debug) << "setting all labels to 1";
     utils::set_label_to_all(*G, 1);
-    BOOST_LOG_TRIVIAL(info) << "set all labels to 1";
+    BOOST_LOG_TRIVIAL(debug) << "set all labels to 1";
 
     // Free memory of G_c
     delete G_c;
-    BOOST_LOG_TRIVIAL(info) << "deleted G_c";
+    BOOST_LOG_TRIVIAL(debug) << "deleted G_c";
 
     if(return_edges){
-        BOOST_LOG_TRIVIAL(info) << "converting edgeSets to edges list";
+        BOOST_LOG_TRIVIAL(debug) << "converting edgeSets to edges list";
       bp::list out_list = utils::edgeSets_to_edges_list(P, *G);
-        BOOST_LOG_TRIVIAL(info) << "returning";
+        BOOST_LOG_TRIVIAL(debug) << "returning";
       return out_list;
     }
     else{
@@ -544,6 +544,11 @@ void Ksp::cost_transform(const std::vector<double> & distance,
         s_i = distance[source(*ei, g_out)];
         s_j = distance[target(*ei, g_out)];
         w_ij = g_out[*ei].weight;
+        BOOST_LOG_TRIVIAL(trace) << "e: " << g_out[source(*ei, g_out)].id << ", "
+                                << g_out[target(*ei, g_out)].id;
+        BOOST_LOG_TRIVIAL(trace) << "s_i: " << s_i;
+        BOOST_LOG_TRIVIAL(trace) << "s_j: " << s_j;
+        BOOST_LOG_TRIVIAL(trace) << "w_ij: " << w_ij;
         g_out[*ei].weight = w_ij + s_i - s_j;
     }
 

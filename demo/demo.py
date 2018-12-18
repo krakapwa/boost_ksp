@@ -37,9 +37,9 @@ edges.append((nodes['d'], nodes['z'], 1, id_e, 'd', 'z'))
 id_e += 1
 edges.append((nodes['a'], nodes['e'], 1, id_e, 'a', 'e'))
 id_e += 1
-edges.append((nodes['e'], nodes['f'], 3, id_e, 'e', 'f'))
+edges.append((nodes['e'], nodes['f'], -3, id_e, 'e', 'f'))
 id_e += 1
-edges.append((nodes['f'], nodes['z'], 5, id_e, 'f', 'z'))
+edges.append((nodes['f'], nodes['z'], -5, id_e, 'f', 'z'))
 id_e += 1
 edges.append((nodes['e'], nodes['b'], 1, id_e, 'e', 'b'))
 id_e += 1
@@ -77,7 +77,8 @@ v = source_ind
 print('out_edges from vertex {}'.format(v))
 print(g.out_edges(v))
 
-print('testing removal of vertex...')
+print('will remove vertices...')
+print(g.out_edges(v))
 print('-'*50)
 print('num. vertices before: {}'.format(g.num_vertices()))
 print('num. edges before: {}'.format(g.num_edges()))

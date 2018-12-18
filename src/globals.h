@@ -564,6 +564,7 @@ struct EdgeSets{
 
     EdgeSets(const EdgeSets & old){
       // copy constructor
+      // BOOST_LOG_TRIVIAL(info) << "called copy constructor";
       sets.clear();
       for(unsigned int i=0; i<old.size(); ++i) {
         this->append(old[i]);
@@ -593,6 +594,25 @@ struct EdgeSets{
         return sets[i];
     }
 
+    EdgeSets& operator=(EdgeSets other)
+    //other passed by value, thereby calling the copy constructor
+    {
+        // BOOST_LOG_TRIVIAL(info) << "called operator=";
+        swap(*this, other);
+        return *this;
+    }
+
+  void swap(EdgeSets & obj1, EdgeSets & obj2) 
+    {
+      obj1.sets.swap(obj2.sets);
+      // BOOST_LOG_TRIVIAL(info) << "called member swap";
+    }
+
+  EdgeSet back(){
+    return sets.back();
+
+  }
+
     iterator begin(){
         return sets.begin();
     }
@@ -608,6 +628,16 @@ struct EdgeSets{
     reverse_iterator rend(){
         return sets.rend();
     }
+
+    EdgeSets convert_to_graph(const MyGraph & new_g){
+
+      for(unsigned int i = 0; i < this->sets.size(); ++i){
+        this->sets[i].convert_to_graph(new_g);
+      }
+
+        return *this;
+    }
+
 
 };
 

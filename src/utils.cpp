@@ -111,7 +111,8 @@ namespace utils{
                                  << "/"
                                  << "(" << g[source(e, g)].id
                                  << "," << g[target(e, g)].id << ") "
-                                 << "label: " << g[e].label;
+                                 << "label: " << g[e].label
+                                 << " weight: " << g[e].weight;
     }
 
     void print_path(EdgeSet path, const MyGraph & g){
