@@ -27,7 +27,7 @@ g.config(0,
 
 edges = list()
 id_e = int(0)
-edges.append((nodes['a'], nodes['b'], 1, id_e, 'a', 'b'))
+edges.append((nodes['a'], nodes['b'], -1, id_e, 'a', 'b'))
 id_e += 1
 edges.append((nodes['b'], nodes['c'], 1, id_e, 'b', 'c'))
 id_e += 1
@@ -37,9 +37,9 @@ edges.append((nodes['d'], nodes['z'], 1, id_e, 'd', 'z'))
 id_e += 1
 edges.append((nodes['a'], nodes['e'], 1, id_e, 'a', 'e'))
 id_e += 1
-edges.append((nodes['e'], nodes['f'], -3, id_e, 'e', 'f'))
+edges.append((nodes['e'], nodes['f'], 3, id_e, 'e', 'f'))
 id_e += 1
-edges.append((nodes['f'], nodes['z'], -5, id_e, 'f', 'z'))
+edges.append((nodes['f'], nodes['z'], 5, id_e, 'f', 'z'))
 id_e += 1
 edges.append((nodes['e'], nodes['b'], 1, id_e, 'e', 'b'))
 id_e += 1
