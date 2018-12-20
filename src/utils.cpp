@@ -95,7 +95,7 @@ std::tuple<VertexPath, bool> pred_to_path(std::vector<std::size_t> preds,
   return std::make_tuple(path, ok);
 }
 
-void print_edge(Edge e, const MyGraph &g) {
+void print_edge(const Edge & e, const MyGraph &g) {
   BOOST_LOG_TRIVIAL(trace) << "(" << g[source(e, g)].name << ","
                            << g[target(e, g)].name << ")"
                            << "/"
@@ -105,14 +105,14 @@ void print_edge(Edge e, const MyGraph &g) {
                            << " weight: " << g[e].weight;
 }
 
-void print_path(EdgeSet path, const MyGraph &g) {
+void print_path(const EdgeSet & path, const MyGraph &g) {
 
   for (unsigned int i = 0; i < path.size(); ++i) {
     print_edge(path[i], g);
   }
 }
 
-void print_paths(EdgeSets paths, const MyGraph &g) {
+void print_paths(const EdgeSets & paths, const MyGraph &g) {
 
   for (unsigned int i = 0; i < paths.size(); ++i) {
     BOOST_LOG_TRIVIAL(trace) << "path #" << i;
@@ -345,34 +345,7 @@ Edge append_edge(EdgeSet p_app, Vertex start, const MyGraph &g) {
   return p_app[ind_start];
 }
 
-// Convert an edge set from one graph to another
-// (edge descriptors) are invalidated during remove/add operations
-EdgeSets translate_edge_sets(EdgeSets P, const MyGraph &g_new) {
-  // convert edge set P from graph g_p to graph g
-
-  EdgeSets P_out;
-  for (unsigned int i = 0; i < P.size(); ++i) {
-    P[i].convert_to_graph(g_new);
-    P_out.append(P[i]);
-  }
-  BOOST_LOG_TRIVIAL(trace) << "translate_edge_sets finished ";
-  return P_out;
-}
-
-Edge translate_edge(Edge e, const MyGraph &g_p, const MyGraph &g) {
-  // convert edge descriptor e from graph g_p to graph g
-
-  std::pair<Edge, bool> e_out;
-  e_out = edge(source(e, g_p), target(e, g_p), g);
-
-  if (!e_out.second) {
-    // cannot be translated! This could be a problem :~(
-    // print_edge(e, g_p);
-  }
-  return e_out.first;
-}
-
-void invert_edge(Edge e, bool inv_label, bool inv_algebraic_sign,
+void invert_edge(const Edge & e, bool inv_label, bool inv_algebraic_sign,
                  bool ignore_label_val, MyGraph &g) {
   // invert edge e. Can invert sign of labels and/or
   // algebraic sign of weight
@@ -380,7 +353,7 @@ void invert_edge(Edge e, bool inv_label, bool inv_algebraic_sign,
   Vertex u = source(e, g);
   Vertex v = target(e, g);
 
-  print_edge(e, g);
+  // print_edge(e, g);
 
   if (g[e].label > 0 || ignore_label_val) {
     double weight = g[e].weight;
@@ -399,7 +372,8 @@ void invert_edge(Edge e, bool inv_label, bool inv_algebraic_sign,
   }
 }
 
-void invert_edges(EdgeSets edge_sets, bool inv_label, bool inv_algebraic_sign,
+void invert_edges(const EdgeSets & edge_sets,
+                  bool inv_label, bool inv_algebraic_sign,
                   bool ignore_label_val, MyGraph &g) {
   // invert edges on edge_sets. Can invert sign of labels and/or
   // algebraic sign of weight
@@ -410,7 +384,7 @@ void invert_edges(EdgeSets edge_sets, bool inv_label, bool inv_algebraic_sign,
   }
 }
 
-void invert_edges(EdgeSet edge_path, bool inv_label, bool inv_algebraic_sign,
+void invert_edges(const EdgeSet & edge_path, bool inv_label, bool inv_algebraic_sign,
                   bool ignore_label_val, MyGraph &g) {
   // invert path edge_path. Can invert sign of labels and/or
   // algebraic sign of weight
@@ -421,13 +395,14 @@ void invert_edges(EdgeSet edge_path, bool inv_label, bool inv_algebraic_sign,
   }
 }
 
-double calc_cost(EdgeSets P, const MyGraph &g) {
+double calc_cost(const EdgeSets & P, const MyGraph &g) {
   // Returns the total cost of edge sets
 
   double cost = 0;
 
   for (unsigned int i = 0; i < P.size(); ++i) {
     for (unsigned int j = 0; j < P[i].size(); ++j) {
+      // BOOST_LOG_TRIVIAL(debug) << "calc_cost loop";
       cost += g[P[i][j]].weight;
     }
   }
@@ -490,7 +465,7 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
    */
 
   // initialize P_l_plus_1 with empty sets
-  EdgeSets P_l_plus_1;
+  EdgeSets P_l_plus_1(g);
   EdgeSet P_l_plus_1_flat(g);
 
   // This stores edges of last run to pick from
@@ -595,7 +570,7 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
   }
 
   BOOST_LOG_TRIVIAL(trace) << "done augmenting l paths";
-  P_l_plus_1.append(p_);
+  P_l_plus_1 += p_;
 
   BOOST_LOG_TRIVIAL(trace) << "settings labels to all";
   for (unsigned int i = 0; i < P_l_plus_1.size(); ++i)

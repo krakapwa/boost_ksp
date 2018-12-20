@@ -32,28 +32,25 @@ bool add_edge(MyGraph &g, vertex_id_type n0, vertex_id_type n1, double w,
               edge_id_type id, std::string str_0, std::string str_1, int label);
 
 int get_max_id(const MyGraph &g);
-void print_edge(Edge e, const MyGraph &g);
+void print_edge(const Edge & e, const MyGraph &g);
 void print_dist_pred(std::vector<double> dist, std::vector<Vertex> preds,
                      const MyGraph &g);
 std::tuple<VertexPath, bool> pred_to_path(std::vector<std::size_t> preds,
                                           const MyGraph &g, Vertex source,
                                           Vertex sink);
-void print_path(EdgeSet path, const MyGraph &g);
-void print_paths(EdgeSets paths, const MyGraph &g);
+void print_path(const EdgeSet & path, const MyGraph &g);
+void print_paths(const EdgeSets & paths, const MyGraph &g);
 void print_all(const MyGraph &g);
 
-void invert_edge(Edge e, bool inv_label, bool inv_algebraic_sign,
+void invert_edge(const Edge & e, bool inv_label, bool inv_algebraic_sign,
                  bool ignore_label_val, MyGraph &g);
 
-void invert_edges(EdgeSet edge_path, bool inv_label, bool inv_algebraic_sign,
+void invert_edges(const EdgeSet & edge_path, bool inv_label, bool inv_algebraic_sign,
                   bool ignore_label_val, MyGraph &g);
 
-void invert_edges(EdgeSets edge_sets, bool inv_label, bool inv_algebraic_sign,
+void invert_edges(const EdgeSets & edge_sets, bool inv_label, bool inv_algebraic_sign,
                   bool ignore_label_val, MyGraph &g);
 
-EdgeSets translate_edge_sets(EdgeSets P, const MyGraph &g);
-
-Edge translate_edge(Edge e, const MyGraph &g_p, const MyGraph &g);
 
 EdgeSet vertpath_to_edgepath(VertexPath path, const MyGraph &g);
 
@@ -84,7 +81,7 @@ edge_id_type find_ind_edge_starting_with(EdgeSet p, vertex_id_type v_id,
 
 edge_id_type find_ind_edge_ending_with(EdgeSet p, Vertex v, const MyGraph &g);
 
-double calc_cost(EdgeSets P, const MyGraph &g);
+double calc_cost(const EdgeSets & P, const MyGraph &g);
 Edge append_edge(EdgeSet p_app, Vertex start, const MyGraph &g);
 
 bp::list edgeSets_to_edges_list(EdgeSets P, const MyGraph &g);

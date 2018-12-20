@@ -27,7 +27,7 @@ g.config(0,
 
 edges = list()
 id_e = int(0)
-edges.append((nodes['a'], nodes['b'], -1, id_e, 'a', 'b'))
+edges.append((nodes['a'], nodes['b'], 1, id_e, 'a', 'b'))
 id_e += 1
 edges.append((nodes['b'], nodes['c'], 1, id_e, 'b', 'c'))
 id_e += 1
@@ -60,6 +60,7 @@ g.set_sink(sink_ind, 'z')
 for e in edges:
     g.add_edge(*e)
 
+# while True:
 res = g.run()
 
 

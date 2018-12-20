@@ -10,7 +10,7 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(Python_ADDITIONAL_VERSIONS 3.4)
-find_package(PythonLibs 3 REQUIRED)
+# find_package(PythonLibs 3 REQUIRED)
 
 message("Include dirs of Python: " ${PYTHON_INCLUDE_DIRS} )
 message("Libs of Python: " ${PYTHON_LIBRARIES} )
@@ -21,7 +21,7 @@ ENDIF()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 #find_package( Boost 1.63.0 COMPONENTS python3 numpy3 log REQUIRED )
 find_package( Boost 1.63.0 COMPONENTS python3 log REQUIRED )

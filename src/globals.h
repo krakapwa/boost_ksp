@@ -37,6 +37,7 @@
 #include <boost/shared_ptr.hpp>
 #include <numeric>
 #include <tuple>
+#include <iostream>
 
 namespace bp = boost::python;
 namespace bn = boost::python::numpy;
@@ -75,14 +76,14 @@ struct VertexProperty {
   std::string name;
   vertex_id_type id;
 
-  bool operator==(VertexProperty v) {
+  bool operator==(const VertexProperty & v) {
     if (id == v.id)
       return true;
     else
       return false;
   }
 
-  bool operator!=(VertexProperty v) {
+  bool operator!=(const VertexProperty & v) {
     if (id != v.id)
       return true;
     else
@@ -114,27 +115,6 @@ std::vector<std::size_t> idx_desc_sort(const std::vector<T> &v) {
   return result;
 }
 
-// Visitor that throw an exception when finishing the destination vertex
-class my_visitor : boost::default_bfs_visitor {
-protected:
-  Vertex destination_vertex_m;
-
-public:
-  my_visitor(Vertex destination_vertex_l)
-      : destination_vertex_m(destination_vertex_l){};
-
-  void initialize_vertex(const Vertex &s, const MyGraph &g) const {}
-  void discover_vertex(const Vertex &s, const MyGraph &g) const {}
-  void examine_vertex(const Vertex &s, const MyGraph &g) const {}
-  void examine_edge(const Edge &e, const MyGraph &g) const {}
-  void edge_relaxed(const Edge &e, const MyGraph &g) const {}
-  void edge_not_relaxed(const Edge &e, const MyGraph &g) const {}
-  void finish_vertex(const Vertex &s, const MyGraph &g) const {
-    if (destination_vertex_m == s)
-      throw(2);
-  }
-};
-
 // We'll make extensive use of edge sets
 struct EdgeSet {
   EdgeVec edges;
@@ -145,21 +125,52 @@ struct EdgeSet {
   // Default constructor. Must assign a graph!
   EdgeSet(const MyGraph &a_g) { g = &a_g; }
 
+  ~EdgeSet() { edges.clear(); }
+
+  // copy constructor
   EdgeSet(const EdgeSet &old) {
-    // copy constructor
-    // BOOST_LOG_TRIVIAL(info) << "called copy constructor";
+    BOOST_LOG_TRIVIAL(info) << "called copy constructor EdgeSet";
     edges.clear();
+    this->g = old.g;
     *this += old;
   }
 
   EdgeSet &operator+=(const EdgeSet &p) {
 
-    edges.insert(edges.end(), p.edges.begin(), p.edges.end());
+    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSet -> EdgeSet";
+    // BOOST_LOG_TRIVIAL(info) << "this->g: " << g
+    //                         << " p.g: " << p.g;
+    try{
+      if(g != p.g) throw 1;
+    }
+    catch(int e){
+
+      BOOST_LOG_TRIVIAL(info) << "exception " << e;
+      BOOST_LOG_TRIVIAL(info) << "operator += from EdgeSet to EdgeSet"
+                              << " graphs don't match!";
+
+    }
+    BOOST_LOG_TRIVIAL(info) << "p.edges.size(): " << p.edges.size();
+    BOOST_LOG_TRIVIAL(info) << "edges.size(): " << edges.size();
+    // edges.insert(this->edges.end(), p.edges.begin(), p.edges.end());
+    for(unsigned int i=0; i < p.edges.size(); ++ i){
+      // BOOST_LOG_TRIVIAL(info) << "p.edges[" << i << "]: " << p.edges[i];
+      *this += p.edges[i];
+
+    }
+    BOOST_LOG_TRIVIAL(debug) << "inserted!";
 
     return *this;
   }
 
-  EdgeSet operator-=(EdgeSet p) {
+  EdgeSet &operator+=(const Edge &e) {
+
+    edges.push_back(e);
+
+    return *this;
+  }
+
+  EdgeSet operator-=(const EdgeSet & p) {
 
     for (unsigned int i = 0; i < p.size(); ++i) {
       *this -= p[i];
@@ -168,7 +179,7 @@ struct EdgeSet {
     return *this;
   }
 
-  EdgeSet operator-=(Edge &e) {
+  EdgeSet operator-=(const Edge &e) {
 
     Vertex curr_u;
     Vertex curr_v;
@@ -192,16 +203,31 @@ struct EdgeSet {
     return *this;
   }
 
-  EdgeSet &operator+=(const Edge &e) {
+  const Edge &operator[](const edge_id_type &i) const { return edges[i]; }
 
-    this->edges.push_back(e);
+  EdgeSet & operator=(const EdgeSet &new_set) {
+    g = new_set.g;
+    edges.clear();
+    edges = new_set.edges;
+    BOOST_LOG_TRIVIAL(trace) << "EdgeSet operator= returning";
 
     return *this;
   }
 
-  Edge &operator[](const edge_id_type &i) { return edges[i]; }
+  void print() const{
 
-  void operator=(EdgeVec &new_e) { edges = new_e; }
+    for (unsigned int i = 0; i < edges.size(); ++i) {
+
+      BOOST_LOG_TRIVIAL(trace) << "(" << (*g)[source(edges[i], *g)].name << ","
+                               << (*g)[target(edges[i], *g)].name << ")"
+                                << "/"
+                               << "(" << (*g)[source(edges[i], *g)].id << ","
+                               << (*g)[target(edges[i], *g)].id << ") "
+                               << "label: " << (*g)[edges[i]].label
+                               << " weight: " << (*g)[edges[i]].weight;
+    }
+    
+  }
 
   unsigned int size() const { return edges.size(); }
 
@@ -449,7 +475,7 @@ struct EdgeSet {
 
   EdgeSet convert_to_graph(const MyGraph &new_g) {
     // Convert edge descriptors to new graph
-    // In place conversion of valid edges
+    // this works in-place
 
     EdgeSet p_valid(new_g);
     std::pair<Edge, bool> e;
@@ -464,8 +490,8 @@ struct EdgeSet {
         p_valid += e.first;
     }
 
-    g = &new_g;
-    edges = p_valid.edges;
+    this->g = p_valid.g;
+    this->edges = p_valid.edges;
 
     return *this;
   }
@@ -505,7 +531,7 @@ inline EdgeSet operator+(const EdgeSet &p0, const Edge &e) {
   return p_out;
 }
 
-inline EdgeSet operator-(EdgeSet p0, EdgeSet p1) {
+inline EdgeSet operator-(const EdgeSet & p0, const EdgeSet & p1) {
   // Set substraction
 
   EdgeSet p_out(*(p0.g));
@@ -525,56 +551,91 @@ public:
   LabelSorter(MyGraph a_g) { g = a_g; }
   bool compareLabels(const Edge e0, const Edge e1, MyGraph g) const {
 
-    BOOST_LOG_TRIVIAL(debug)
+    BOOST_LOG_TRIVIAL(trace)
         << "compareLabels (e0, e1): " << g[e0].label << "," << g[e1].label
         << " return " << (g[e0].label > g[e1].label);
     return g[e0].label > g[e1].label;
   }
-  bool operator()(const Edge e0, const Edge e1) const {
+  bool operator()(const Edge & e0, const Edge & e1) const {
     return compareLabels(e0, e1, g);
   }
 };
 
 struct EdgeSets {
   std::vector<EdgeSet> sets;
+  const MyGraph *g;
   using iterator = std::vector<EdgeSet>::iterator;
   using reverse_iterator = std::vector<EdgeSet>::reverse_iterator;
 
-  EdgeSets() {}
+  EdgeSets(const MyGraph & a_g) { g = &a_g;}
+
+  ~EdgeSets() { sets.clear(); }
 
   EdgeSets(const EdgeSets &old) {
     // copy constructor
-    // BOOST_LOG_TRIVIAL(debug) << "in copy constructor";
-    sets.clear();
-    // BOOST_LOG_TRIVIAL(debug) << "in copy constructor. cleared";
-    sets.reserve(old.size());
-    this->append(old);
-    // BOOST_LOG_TRIVIAL(debug) << "in copy constructor. done append";
+    BOOST_LOG_TRIVIAL(debug) << "in copy constructor EdgeSets";
+    g = old.g;
+    sets = old.sets;
+    // BOOST_LOG_TRIVIAL(trace) << "in copy constructor. done append";
   }
 
-  EdgeSets &operator=(EdgeSets other)
-  // other passed by value, thereby calling the copy constructor
+  EdgeSets &operator=(const EdgeSets &other)
   {
-    // BOOST_LOG_TRIVIAL(info) << "in operator=";
-    swap(*this, other);
+    BOOST_LOG_TRIVIAL(debug) << "in operator=";
+
+    EdgeSets tmp(other);
+    this->swap(tmp);
+    
+    BOOST_LOG_TRIVIAL(debug) << "copied";
     return *this;
   }
 
-  void swap(EdgeSets &obj1, EdgeSets &obj2) {
-    obj1.sets.swap(obj2.sets);
-    // BOOST_LOG_TRIVIAL(info) << "in member swap";
+  void swap(EdgeSets & other) {
+    using std::swap;
+    swap(sets, other.sets);
+    swap(g, other.g);
   }
 
-  void append(const EdgeSet &new_set) { sets.push_back(new_set); }
+  EdgeSets &operator+=(const EdgeSet &new_set) {
 
-  void append(const EdgeSets &new_sets) {
-        // BOOST_LOG_TRIVIAL(debug) << "in append";
-        // BOOST_LOG_TRIVIAL(debug) << "will append " << new_.size() << " EdgeSet";
-        // BOOST_LOG_TRIVIAL(debug) << "to EdgeSets of size " << this->size();
-    for (unsigned int i = 0; i < new_sets.size(); ++i) {
-        BOOST_LOG_TRIVIAL(debug) << "in append loop";
-        this->append(new_sets[i]);
+    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSet -> EdgeSets";
+      // BOOST_LOG_TRIVIAL(info) << "this->g: " << g
+      //                         << " new_set.g: " << new_set.g;
+
+    try{
+      if(g != new_set.g) throw 1;
     }
+    catch(int e){
+
+      BOOST_LOG_TRIVIAL(info) << "exception " << e;
+      BOOST_LOG_TRIVIAL(info) << "operator += from EdgeSet to EdgeSets"
+                              << " graphs don't match!";
+    }
+    BOOST_LOG_TRIVIAL(debug) << "will push_back EdgeSet to EdgeSets";
+    sets.push_back(new_set);
+    BOOST_LOG_TRIVIAL(debug) << "done append EdgeSet -> EdgeSets";
+
+    return *this;
+  }
+
+  EdgeSets operator+=(const EdgeSets &new_sets) {
+    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSets -> EdgeSets";
+    BOOST_LOG_TRIVIAL(trace) << "new_sets.size():  " << new_sets.size();
+    BOOST_LOG_TRIVIAL(trace) << "this->size(): " << this->size();
+    // new_sets.print();
+
+    for (unsigned int i = 0; i < new_sets.size(); ++i) {
+      BOOST_LOG_TRIVIAL(trace) << "in append loop";
+      *this += new_sets[i];
+    }
+    return *this;
+  }
+
+  void print() const{
+    for (unsigned int i = 0; i < sets.size(); ++i) {
+      sets[i].print();
+    }
+
   }
 
   void insert(const EdgeSet &new_set) {
@@ -584,8 +645,15 @@ struct EdgeSets {
 
   unsigned int size() const { return sets.size(); }
 
-  EdgeSet operator[](int i) const { return sets[i]; }
+  const EdgeSet & operator[](const int & i) const {
 
+    if(i >= sets.size()){
+      BOOST_LOG_TRIVIAL(debug) << "operator[]: asking for invalid index: "
+                               << i << ". size is: " << sets.size();
+}
+
+    return sets[i];
+  }
 
   EdgeSet back() { return sets.back(); }
 
@@ -598,6 +666,9 @@ struct EdgeSets {
   reverse_iterator rend() { return sets.rend(); }
 
   EdgeSets convert_to_graph(const MyGraph &new_g) {
+    // This converts in-place
+
+    BOOST_LOG_TRIVIAL(debug) << "EdgeSets convert_to_graph";
 
     for (unsigned int i = 0; i < this->sets.size(); ++i) {
       this->sets[i].convert_to_graph(new_g);

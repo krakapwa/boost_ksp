@@ -111,13 +111,14 @@ bp::list Ksp::out_edges(vertex_id_type u_id) {
 
 void Ksp::remove_edge(vertex_id_type u_id, vertex_id_type v_id) {
 
-  Vertex u, v;
+  Vertex u = 0;
   VertexIter wi, wi_end;
   for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi) {
     if ((*G)[*wi].id == u_id)
       u = *wi;
   }
 
+  Vertex v = 0;
   for (boost::tie(wi, wi_end) = vertices(*G); wi != wi_end; ++wi) {
     if ((*G)[*wi].id == v_id)
       v = *wi;
@@ -181,37 +182,46 @@ bp::list Ksp::run() {
 
   // Make copy of graph for cost transformation
   G_c = new MyGraph(0);
+  BOOST_LOG_TRIVIAL(debug) << "&G: " << G;
+  BOOST_LOG_TRIVIAL(debug) << "&G_c: " << G_c;
 
   copy_graph(*G, *G_c);
   (*G_c)[graph_bundle].name = (*G)[graph_bundle].name + "_cost_transform";
 
   // Store output of shortest-paths
+  bool res_ok;
+
+  std::vector<double> res_distance(num_vertices(),
+                                (std::numeric_limits<double>::max)());
+
+  auto v_index = get(boost::vertex_index, *G);
+  res_distance[v_index[source_vertex]] = 0;
+
+  EdgeSets P(*G);
+  EdgeSets P_prev(*G);
   EdgeSet res_path(*G);
   EdgeSet p_inter(*G_c);
-  bool res_ok;
-  std::vector<double> res_distance;
-
-  EdgeSets P;
-  EdgeSets P_prev;
 
   BOOST_LOG_TRIVIAL(debug) << "graph: ";
   utils::print_all(*G);
 
   BOOST_LOG_TRIVIAL(debug) << "Bellman-Ford...";
-  std::tie(res_path, res_ok, res_distance) = bellman_ford_shortest_paths(*G);
+  bellman_ford_shortest_paths(*G, res_path, res_ok, res_distance);
 
   if (!res_ok) {
     BOOST_LOG_TRIVIAL(error) << "Couldn't compute a single path!";
   } else {
     BOOST_LOG_TRIVIAL(debug) << "...ok";
-    P.append(res_path);
+    P += res_path;
+    BOOST_LOG_TRIVIAL(debug) << "added";
     cost = utils::calc_cost(P, *G);
     BOOST_LOG_TRIVIAL(info) << "l: " << 0 << ", cost: " << cost;
 
     utils::print_paths(P, *G);
   }
 
-  utils::invert_edges(P, true, true, true, *G_c);
+  BOOST_LOG_TRIVIAL(debug) << "inverting edges bf";
+  utils::invert_edges(EdgeSets(P).convert_to_graph(*G_c), true, true, true, *G_c);
 
   BOOST_LOG_TRIVIAL(debug) << "inverted edges on g_c";
   P_prev = P;
@@ -255,7 +265,7 @@ bp::list Ksp::run() {
         p_inter.convert_to_graph(*G);
         P = utils::augment(P, p_cut_g, p_inter, sink_vertex, *G);
       } else {
-        P.append(p_inter);
+        P += p_inter;
         utils::set_label(p_inter, *G, -P.size());
       }
       new_cost = utils::calc_cost(P, *G);
@@ -322,6 +332,7 @@ bp::list Ksp::run() {
   delete G_c;
   BOOST_LOG_TRIVIAL(debug) << "deleted G_c";
 
+  utils::print_all(*G);
   if (return_edges) {
     BOOST_LOG_TRIVIAL(debug) << "converting edgeSets to edges list";
     bp::list out_list = utils::edgeSets_to_edges_list(P, *G);
@@ -346,7 +357,7 @@ Ksp::dijkstra_shortest_paths(const MyGraph &g, Vertex source_vertex,
 
   std::vector<std::size_t> predecessors(num_vertices());
 
-  my_visitor vis(sink_vertex);
+  // my_visitor vis(sink_vertex);
 
   VertexPath shortest;
   bool r;
@@ -390,12 +401,13 @@ Ksp::dijkstra_shortest_paths(const MyGraph &g, Vertex source_vertex,
   return std::make_tuple(out_path, r, distances);
 }
 
-std::tuple<EdgeSet, bool, std::vector<double>>
-Ksp::bellman_ford_shortest_paths(const MyGraph &g) {
+void
+Ksp::bellman_ford_shortest_paths(const MyGraph &g, EdgeSet & res_path,
+                                 bool & res_ok,
+                                 std::vector<double> & res_distance ) {
 
-  EdgeSet out_path(g);
   std::pair<VertexIter, VertexIter> vp;
-  auto v_index = get(boost::vertex_index, g);
+  // auto v_index = get(boost::vertex_index, g);
   auto weight = boost::make_transform_value_property_map(
       std::mem_fn(&EdgeProperty::weight), get(boost::edge_bundle, g));
 
@@ -404,29 +416,34 @@ Ksp::bellman_ford_shortest_paths(const MyGraph &g) {
   // for (vp = vertices(*G); vp.first != vp.second; ++vp.first)
   //    predecessors[v_index[*vp.first]] = v_index[*vp.first];
 
-  std::vector<double> distances(num_vertices(),
-                                (std::numeric_limits<double>::max)());
-  distances[v_index[source_vertex]] = 0;
+  // std::vector<double> distances(num_vertices(),
+  //                               (std::numeric_limits<double>::max)());
+  // distances[v_index[source_vertex]] = 0;
 
-  bool r = boost::bellman_ford_shortest_paths(
+  auto v_index = get(boost::vertex_index, *G);
+  res_ok = boost::bellman_ford_shortest_paths(
       *G, num_vertices(),
       weight_map(weight)
-          .distance_map(make_iterator_property_map(distances.begin(), v_index))
+          .distance_map(make_iterator_property_map(res_distance.begin(),
+                                                   v_index))
           .predecessor_map(
-              make_iterator_property_map(predecessors.begin(), v_index)));
+              make_iterator_property_map(predecessors.begin(),
+                                         v_index)));
 
   VertexPath shortest;
 
-  if (r) {
+  if (res_ok) {
+
+    BOOST_LOG_TRIVIAL(info) << "pred_to_path";
     std::tie(shortest, std::ignore) =
         utils::pred_to_path(predecessors, g, source_vertex, sink_vertex);
-    out_path = utils::vertpath_to_edgepath(shortest, g);
-  } else {
-    BOOST_LOG_TRIVIAL(info) << "negative cycle";
-    out_path = EdgeSet(g);
+    BOOST_LOG_TRIVIAL(info) << "pred_to_path ok";
+    res_path = utils::vertpath_to_edgepath(shortest, g);
+    BOOST_LOG_TRIVIAL(info) << "vertpath_to_edgepath ok";
   }
-
-  return std::make_tuple(out_path, r, distances);
+  else {
+    BOOST_LOG_TRIVIAL(info) << "negative cycle";
+  }
 }
 
 void Ksp::cost_transform(const std::vector<double> &distance, MyGraph &g_out) {

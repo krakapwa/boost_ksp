@@ -88,8 +88,11 @@ class Ksp {
         void new_graph();
 
 
-        std::tuple<EdgeSet, bool, std::vector<double>>
-        bellman_ford_shortest_paths(const MyGraph & g);
+        void
+        bellman_ford_shortest_paths(const MyGraph & g,
+                                    EdgeSet & res_path,
+                                    bool & res_ok,
+                                    std::vector<double> & res_distance);
 
         std::tuple<EdgeSet, bool, std::vector<double>>
         dijkstra_shortest_paths(const MyGraph & g,
