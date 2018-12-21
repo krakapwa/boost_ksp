@@ -21,7 +21,7 @@
 #include "utils.h"
 
 namespace utils {
-Vertex add_vertex(MyGraph &g, int id, std::string str) {
+VertexDesc add_vertex(MyGraph &g, int id, std::string str) {
   // This has to pass through all vertices before adding (overhead).
 
   std::pair<VertexIter, VertexIter> vp;
@@ -32,7 +32,7 @@ Vertex add_vertex(MyGraph &g, int id, std::string str) {
     }
 
   // add new vertex
-  Vertex res = boost::add_vertex(g);
+  VertexDesc res = boost::add_vertex(g);
   g[res].name = str;
   g[res].id = id;
 
@@ -44,10 +44,10 @@ bool add_edge(MyGraph &g, vertex_id_type n0, vertex_id_type n1, double w,
               std::string str_1 = "", int label = 1) {
 
   // Add two vertices
-  Vertex v0 = add_vertex(g, n0, str_0);
-  Vertex v1 = add_vertex(g, n1, str_1);
+  VertexDesc v0 = add_vertex(g, n0, str_0);
+  VertexDesc v1 = add_vertex(g, n1, str_1);
 
-  std::pair<Edge, bool> e;
+  std::pair<EdgeDesc, bool> e;
   e = boost::edge(v0, v1, g);
 
   if (!e.second) {
@@ -64,15 +64,15 @@ bool add_edge(MyGraph &g, vertex_id_type n0, vertex_id_type n1, double w,
 }
 
 std::tuple<VertexPath, bool> pred_to_path(std::vector<std::size_t> preds,
-                                          const MyGraph &g, Vertex source,
-                                          Vertex sink) {
+                                          const MyGraph &g, VertexDesc source,
+                                          VertexDesc sink) {
   // Converts from predecessor map to vector of edge descriptors
 
   auto v_index = get(boost::vertex_index, g);
 
   VertexPath path;
-  Vertex current = sink;
-  Vertex last;
+  VertexDesc current = sink;
+  VertexDesc last;
   bool ok = true;
 
   path.push_back(current);
@@ -95,14 +95,14 @@ std::tuple<VertexPath, bool> pred_to_path(std::vector<std::size_t> preds,
   return std::make_tuple(path, ok);
 }
 
-void print_edge(const Edge & e, const MyGraph &g) {
-  BOOST_LOG_TRIVIAL(trace) << "(" << g[source(e, g)].name << ","
-                           << g[target(e, g)].name << ")"
+void print_edge(const Edge& e, const MyGraph &g) {
+  BOOST_LOG_TRIVIAL(trace) << "(" << g[e.in].name << ","
+                           << g[e.out].name << ")"
                            << "/"
-                           << "(" << g[source(e, g)].id << ","
-                           << g[target(e, g)].id << ") "
-                           << "label: " << g[e].label
-                           << " weight: " << g[e].weight;
+                           << "(" << g[e.in].id << ","
+                           << g[e.out].id << ") "
+                           << "label: " << g[e.to_edge_desc(g).first].label
+                           << " weight: " << g[e.to_edge_desc(g).first].weight;
 }
 
 void print_path(const EdgeSet & path, const MyGraph &g) {
@@ -126,7 +126,7 @@ EdgeSet get_edges_from_label(const MyGraph &g, int label) {
 
   for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei) {
     if (g[*ei].label == label)
-      out += *ei;
+      out += Edge(*ei, g);
   }
   return out;
 }
@@ -135,11 +135,11 @@ void set_label(EdgeSet p, MyGraph &g, int label) {
 
   EdgeSet::iterator it;
   for (it = p.begin(); it != p.end(); ++it) {
-    g[*it].label = label;
+    g[(*it).to_edge_desc(g).first].label = label;
   }
 }
 
-void set_label(Edge e, MyGraph &g, int label) { g[e].label = label; }
+void set_label(EdgeDesc e, MyGraph &g, int label) { g[e].label = label; }
 
 void set_label_to_all(MyGraph &g, int label) {
   // Assigns a label to all edges
@@ -152,20 +152,20 @@ void set_label_to_all(MyGraph &g, int label) {
 }
 
 // Assigns a label to edges that are invalid
-void set_label_to_invalid_edges(EdgeSet e_in, MyGraph &g_in, MyGraph &g_out,
+void set_label_to_invalid_edges(EdgeSet p, MyGraph &g_out,
                                 int label, bool invert) {
   // Assigns a label to invalid edges
 
-  Vertex u;
-  Vertex v;
+  VertexDesc u;
+  VertexDesc v;
 
-  for (unsigned int i = 0; i < e_in.size(); ++i) {
+  for (unsigned int i = 0; i < p.size(); ++i) {
     if (invert) {
-      u = target(e_in[i], g_in);
-      v = source(e_in[i], g_in);
+      u = p[i].out;
+      v = p[i].in;
     } else {
-      u = source(e_in[i], g_in);
-      v = target(e_in[i], g_in);
+      u = p[i].in;
+      v = p[i].out;
     }
 
     if (!edge(u, v, g_out).second)
@@ -176,11 +176,11 @@ void set_label_to_invalid_edges(EdgeSet e_in, MyGraph &g_in, MyGraph &g_out,
   }
 }
 
-void set_label_to_edges(MyGraph &g, EdgeSet es, int label) {
+void set_label_to_edges(MyGraph &g, EdgeSet p, int label) {
   // Assigns a label to edges
 
-  for (unsigned int i = 0; i < es.size(); ++i) {
-    g[es[i]].label = label;
+  for (unsigned int i = 0; i < p.size(); ++i) {
+    g[p[i].to_edge_desc(g).first].label = label;
   }
 }
 
@@ -217,39 +217,27 @@ void print_all(const MyGraph &g) {
 }
 
 // Converts from vertex to edge
-EdgeSet vertpath_to_edgepath(VertexPath path, const MyGraph &g) {
-  EdgeSet ep(g);
-  std::pair<Edge, bool> e_tmp;
+EdgeSet vertpath_to_edgepath(VertexPath v_path, const MyGraph &g) {
+  EdgeSet p(g);
   // Convert set of vertices to set of edges
 
   VertexPath::reverse_iterator it;
-  for (it = path.rbegin(); it != path.rend() - 1; ++it) {
-    e_tmp = edge(*it, *std::next(it), g);
-    ep += e_tmp.first;
+  for (it = v_path.rbegin(); it != v_path.rend() - 1; ++it) {
+    Edge e = Edge(*it, *std::next(it));
+    p += e;
   }
-  return ep;
+  return p;
 }
 
-void print_dist_pred(std::vector<double> distances,
-                     std::vector<Vertex> predecessors, const MyGraph &g) {
-  // To test Bellman-Ford and Dijkstra results
-  std::cout << "distances and parents:\n";
-  for (auto v : boost::make_iterator_range(boost::vertices(g))) {
-    std::string name = g[v].name;
-    std::cout << "distance(" << name << ") = " << distances[v] << ", ";
-    std::cout << "parent(" << name << ") = " << g[predecessors[v]].name << "\n";
-  }
-}
-
-bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g,
+bool edge_is_in_set(EdgeDesc e, EdgeSet p, const MyGraph &g,
                     bool inv_direction = false) {
   // Is edge e in edge set p?
 
-  Vertex curr_v_in;
-  Vertex curr_v_out;
+  VertexDesc curr_v_in;
+  VertexDesc curr_v_out;
 
-  Vertex v_in;
-  Vertex v_out;
+  VertexDesc v_in;
+  VertexDesc v_out;
 
   if (inv_direction) {
     v_in = target(e, g);
@@ -260,8 +248,8 @@ bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g,
   }
 
   for (unsigned int i = 0; i < p.size(); ++i) {
-    curr_v_in = source(p[i], g);
-    curr_v_out = target(p[i], g);
+    curr_v_in = p[i].in;
+    curr_v_out = p[i].out;
     if ((g[curr_v_in].id == g[v_in].id) && (g[curr_v_out].id == g[v_out].id))
       return true;
   }
@@ -269,15 +257,15 @@ bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g,
   return false;
 }
 
-bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g_e, const MyGraph &g_p,
+bool edge_is_in_set(EdgeDesc e, EdgeSet p, const MyGraph &g_e, const MyGraph &g_p,
                     bool inv_direction = false) {
   // Is edge e in edge set p?
 
-  Vertex v_in_p;
-  Vertex v_out_p;
+  VertexDesc v_in_p;
+  VertexDesc v_out_p;
 
-  Vertex v_in_e;
-  Vertex v_out_e;
+  VertexDesc v_in_e;
+  VertexDesc v_out_e;
 
   if (inv_direction) {
     v_in_e = target(e, g_e);
@@ -288,8 +276,8 @@ bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g_e, const MyGraph &g_p,
   }
 
   for (unsigned int i = 0; i < p.size(); ++i) {
-    v_in_p = source(p[i], g_p);
-    v_out_p = target(p[i], g_p);
+    v_in_p = p[i].in;
+    v_out_p = p[i].out;
     if ((g_p[v_in_p].id == g_e[v_in_e].id) &&
         (g_p[v_out_p].id == g_e[v_out_e].id))
       return true;
@@ -298,11 +286,11 @@ bool edge_is_in_set(Edge e, EdgeSet p, const MyGraph &g_e, const MyGraph &g_p,
   return false;
 }
 
-edge_id_type find_ind_edge_ending_with(EdgeSet p, Vertex v, const MyGraph &g) {
+edge_id_type find_ind_edge_ending_with(EdgeSet p, VertexDesc v, const MyGraph &g) {
   // Search p for an edge ending with vertex v
 
   for (unsigned int i = 0; i < p.size(); ++i) {
-    if (g[target(p[i], g)].id == g[v].id)
+    if (g[p[i].out].id == g[v].id)
       return i;
   }
 
@@ -315,19 +303,19 @@ edge_id_type find_ind_edge_starting_with(EdgeSet p, vertex_id_type v_id,
 
   BOOST_LOG_TRIVIAL(trace) << "find_ind_edge_starting_with (int): " << v_id;
   for (unsigned int i = 0; i < p.size(); ++i) {
-    if (g[source(p[i], g)].id == v_id) {
+    if (g[p[i].in].id == v_id) {
       return i;
     }
   }
   return -1;
 }
 
-edge_id_type find_ind_edge_starting_with(EdgeSet p, Vertex v,
+edge_id_type find_ind_edge_starting_with(EdgeSet p, VertexDesc v,
                                          const MyGraph &g) {
   // Search p for an edge starting with vertex v
 
   for (unsigned int i = 0; i < p.size(); ++i) {
-    if (g[source(p[i], g)].id == g[v].id) {
+    if (g[p[i].in].id == g[v].id) {
       return i;
     }
   }
@@ -335,7 +323,7 @@ edge_id_type find_ind_edge_starting_with(EdgeSet p, Vertex v,
   return -1;
 }
 
-Edge append_edge(EdgeSet p_app, Vertex start, const MyGraph &g) {
+Edge append_edge(EdgeSet p_app, VertexDesc start, const MyGraph &g) {
   // This function is called when interlacing occurs.
   // One edge of p_app is returned
 
@@ -350,15 +338,15 @@ void invert_edge(const Edge & e, bool inv_label, bool inv_algebraic_sign,
   // invert edge e. Can invert sign of labels and/or
   // algebraic sign of weight
 
-  Vertex u = source(e, g);
-  Vertex v = target(e, g);
+  VertexDesc u = e.in;
+  VertexDesc v = e.out;
 
   // print_edge(e, g);
 
-  if (g[e].label > 0 || ignore_label_val) {
-    double weight = g[e].weight;
-    int label = g[e].label;
-    edge_id_type id = g[e].id;
+  if (g[e.to_edge_desc(g).first].label > 0 || ignore_label_val) {
+    double weight = g[e.to_edge_desc(g).first].weight;
+    int label = g[e.to_edge_desc(g).first].label;
+    edge_id_type id = g[e.to_edge_desc(g).first].id;
 
     if (inv_algebraic_sign)
       weight = -weight;
@@ -403,7 +391,7 @@ double calc_cost(const EdgeSets & P, const MyGraph &g) {
   for (unsigned int i = 0; i < P.size(); ++i) {
     for (unsigned int j = 0; j < P[i].size(); ++j) {
       // BOOST_LOG_TRIVIAL(debug) << "calc_cost loop";
-      cost += g[P[i][j]].weight;
+      cost += g[P[i][j].to_edge_desc(g).first].weight;
     }
   }
 
@@ -417,7 +405,7 @@ bp::list edgeSets_to_edges_list(EdgeSets P, const MyGraph &g) {
   for (unsigned int i = 0; i < P.size(); i++) {
     boost::python::list temp;
     for (unsigned int j = 0; j < P[i].size(); j++) {
-      temp.append(g[P[i][j]].id);
+      temp.append(g[P[i][j].to_edge_desc(g).first].id);
     }
     array.append(temp);
   }
@@ -430,14 +418,14 @@ bp::list edgeSets_to_vertices_list(EdgeSets P, const MyGraph &g) {
   // Convert to python list with edges ids
 
   bp::list array;
-  Vertex u;
-  Vertex v;
+  VertexDesc u;
+  VertexDesc v;
   for (unsigned int i = 0; i < P.size(); i++) {
     boost::python::list temp;
     for (unsigned int j = 0; j < P[i].size(); j++) {
       // temp.append(g[P[i][j]].id);
-      u = source(P[i][j], g);
-      v = target(P[i][j], g);
+      u = P[i][j].in;
+      v = P[i][j].out;
       // std::cout << "u: " << g[u].id << ", v: " << g[v].id << std::endl;
       temp.append(bp::make_tuple<int, int>(g[u].id, g[v].id));
     }
@@ -448,7 +436,7 @@ bp::list edgeSets_to_vertices_list(EdgeSets P, const MyGraph &g) {
 }
 
 EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
-                 Vertex sink_vertex, MyGraph &g) {
+                 VertexDesc sink_vertex, MyGraph &g) {
   /*
     P_l: Solution of past iteration
     p_cut: Edges of p_inter on inverted edges (are removed from candidates
@@ -479,11 +467,11 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
   print_path(p_inter, g);
 
   Edge curr_edge = p_inter[0];
-  Vertex curr_vertex;
+  VertexDesc curr_vertex;
   p_ += curr_edge;
   print_edge(curr_edge, g);
-  while (target(curr_edge, g) != sink_vertex) {
-    curr_vertex = target(curr_edge, g);
+  while (curr_edge.out != sink_vertex) {
+    curr_vertex = curr_edge.out;
     BOOST_LOG_TRIVIAL(trace) << "curr_vertex: " << curr_vertex;
     BOOST_LOG_TRIVIAL(trace) << p_inter.has_out_vertex(curr_vertex);
     if (p_inter.has_out_vertex(curr_vertex)) {
@@ -497,7 +485,7 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
 
     } else {
       BOOST_LOG_TRIVIAL(trace) << "pick from last solution set";
-      curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
+      curr_edge = Edge(last_out_edge(curr_vertex, P_l_clean, g), g);
       P_l_clean -= curr_edge;
     }
     p_ += curr_edge;
@@ -520,16 +508,17 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
       set_label(*p, g, 0);
       P_l_plus_1.insert(*p);
     } else {
-      label_p = g[(*p)[0]].label; // we are tracking this label
+      // we are tracking this label
+      label_p = g[(*p)[0].to_edge_desc(g).first].label; 
       Edge curr_edge = (*p)[0];
       EdgeSet p_new(g);
       p_new += curr_edge;
       P_l_clean -= curr_edge;
-      while (target(curr_edge, g) != sink_vertex) {
+      while (curr_edge.out != sink_vertex) {
         BOOST_LOG_TRIVIAL(trace)
             << "are P_l_clean labels sorted: " << P_l_clean.are_label_sorted();
         BOOST_LOG_TRIVIAL(trace) << "label: " << label_p;
-        curr_vertex = target(curr_edge, g);
+        curr_vertex = curr_edge.out;
         edges_self = out_edges_with_label(curr_vertex, label_p, P_l_clean, g);
         // append inter or branch to other path
         if (edges_self.size() == 0) {
@@ -545,8 +534,8 @@ EdgeSets augment(EdgeSets P_l, EdgeSet p_cut, EdgeSet p_inter,
             P_l_clean -= curr_edge;
           } else {
             BOOST_LOG_TRIVIAL(trace) << "branch to another path";
-            curr_edge = last_out_edge(curr_vertex, P_l_clean, g);
-            // curr_edge = first_out_edge(curr_vertex, P_l_clean, g);
+
+            curr_edge = Edge(last_out_edge(curr_vertex, P_l_clean, g), g);
             p_new += curr_edge;
             P_l_clean -= curr_edge;
             BOOST_LOG_TRIVIAL(trace) << "end branch to another path";
@@ -598,7 +587,7 @@ bool has_duplicate_edge_ids(EdgeSet p, const MyGraph &g) {
   EdgeSet::iterator ei;
 
   for (ei = p.begin(); ei != p.end(); ++ei) {
-    ids.push_back(g[*ei].id);
+    ids.push_back(g[(*ei).to_edge_desc(g).first].id);
   }
 
   auto it = std::unique(ids.begin(), ids.end());
@@ -631,84 +620,87 @@ int num_edges_with_label(const MyGraph &g, int label) {
   return ids.size();
 }
 
-EdgeSet out_edges_with_label(Vertex v, int label, const MyGraph &g) {
+EdgeSet out_edges_with_label(VertexDesc v, int label, const MyGraph &g) {
   // return out_edges on graph g at vertex v with label label.
 
   EdgeSet out(g);
   MyGraph::out_edge_iterator ei, ei_end;
   for (boost::tie(ei, ei_end) = out_edges(v, g); ei != ei_end; ++ei) {
     if (g[*ei].label == label)
-      out += *ei;
+      out += Edge((*ei), g);
   }
 
   return out;
 }
 
-EdgeSet out_edges_with_label(Vertex v, int label, EdgeSet &s,
+EdgeSet out_edges_with_label(VertexDesc v, int label, EdgeSet &p,
                              const MyGraph &g) {
   // return out_edges on graph g at vertex v with label label.
 
   EdgeSet out(g);
   EdgeSet::iterator it;
-  for (it = s.begin(); it != s.end(); ++it) {
-    if ((g[*it].label == label) && (source(*it, g) == v))
+  for (it = p.begin(); it != p.end(); ++it) {
+    if ((g[(*it).to_edge_desc(g).first].label == label) && ((*it).in == v))
       out += *it;
   }
 
   return out;
 }
 
-EdgeSet out_edges_with_neg_label(Vertex v, const MyGraph &g) {
+EdgeSet out_edges_with_neg_label(VertexDesc v, const MyGraph &g) {
   // return out_edges on graph g at vertex v with negative label.
 
   EdgeSet out(g);
   MyGraph::out_edge_iterator ei, ei_end;
   for (boost::tie(ei, ei_end) = out_edges(v, g); ei != ei_end; ++ei) {
     if (g[*ei].label < 0) {
-      out += *ei;
+      out += Edge(*ei, g);
     }
   }
 
   return out;
 }
 
-Edge first_out_edge(Vertex v, EdgeSet &s, const MyGraph &g) {
+EdgeDesc first_out_edge(VertexDesc v, EdgeSet &p, const MyGraph &g) {
   // return edges on graph g at vertex v. Returns first instance.
   EdgeSet::iterator it;
-  for (it = s.begin(); it != s.end(); ++it) {
-    if (g[source(*it, g)].id == g[v].id) {
-      return *it;
+  for (it = p.begin(); it != p.end(); ++it) {
+    // g[(*it).in]
+    if (g[(*it).in].id == g[v].id) {
+      return (*it).to_edge_desc(g).first;
     }
   }
 
   BOOST_LOG_TRIVIAL(trace) << "first_out_edge: found no edge with in vertex: "
                            << g[v].id;
-  return *it;
+  return (*it).to_edge_desc(g).first;
 }
 
-Edge last_out_edge(Vertex v, EdgeSet &s, const MyGraph &g) {
+EdgeDesc last_out_edge(VertexDesc v, EdgeSet &p, const MyGraph &g) {
   // return edges on graph g at vertex v. Returns last instance.
   EdgeSet::reverse_iterator it;
-  for (it = s.rbegin(); it != s.rend(); ++it) {
-    if (g[source(*it, g)].id == g[v].id) {
+  for (it = p.rbegin(); it != p.rend(); ++it) {
+    if (g[(*it).in].id == g[v].id) {
       BOOST_LOG_TRIVIAL(trace)
-          << "last_out_edge: return label: " << g[*it].label;
-      return *it;
+        << "last_out_edge: return label: " <<
+        g[(*it).to_edge_desc(g).first].label;
+      return (*it).to_edge_desc(g).first;
     }
   }
   BOOST_LOG_TRIVIAL(trace) << "last_out_edge: found no edge with in vertex: "
                            << g[v].id;
 
-  return *it;
+  return (*it).to_edge_desc(g).first;
 }
 
-EdgeSet out_edges_with_neg_label(Vertex v, EdgeSet &s, const MyGraph &g) {
+EdgeSet out_edges_with_neg_label(VertexDesc v, EdgeSet &p, const MyGraph &g) {
   // return edges of set s on graph g at vertex v with negative label.
 
   EdgeSet out(g);
   EdgeSet::iterator it;
-  for (it = s.begin(); it != s.end(); ++it) {
-    if ((g[*it].label < 0) && (g[source(*it, g)].id == g[v].id)) {
+  for (it = p.begin(); it != p.end(); ++it) {
+    if ((g[(*it).to_edge_desc(g).first].label < 0) &&
+        (g[(*it).in].id == g[v].id)) {
       out += *it;
     }
   }

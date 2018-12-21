@@ -20,7 +20,7 @@ inv_nodes = {v: k for k, v in nodes.items()}
 g = libksp.ksp()
 g.config(0,
          1,
-         loglevel='trace',
+         loglevel='info',
          l_max=10,
          min_cost=False,
          return_edges=True)
@@ -78,12 +78,13 @@ v = source_ind
 print('out_edges from vertex {}'.format(v))
 print(g.out_edges(v))
 
-print('will remove vertices...')
+print('will remove edges...')
 print(g.out_edges(v))
 print('-'*50)
 print('num. vertices before: {}'.format(g.num_vertices()))
 print('num. edges before: {}'.format(g.num_edges()))
-g.remove_vertex(source_ind)
+g.print_all()
+[g.remove_edge(e[0], e[1]) for e in g.out_edges(v)]
 print('num. vertices after: {}'.format(g.num_vertices()))
 print('num. edges after: {}'.format(g.num_edges()))
-
+g.print_all()

@@ -79,22 +79,24 @@ mems = []
 num_iters = 50000
 
 # for i in range(num_iters):
+g.print_all()
 while True:
 
     # if(i == num_iters // 2):
     #     g, edges = make_graph(nodes)
     #     g.print_all()
 
-    mem = process.memory_percent()
+    # mem = process.memory_percent()
     # print((i, mem))
     # mems.append((i, mem))
 
-    idx_edge_to_remove = np.random.choice(np.arange(0, len(edges)))
-    edge_to_remove = edges[idx_edge_to_remove]
+    idx_edge_to_remove = np.random.choice(np.arange(0, len(edges)), size=3)
+    edge_to_remove = [edges[i] for i in idx_edge_to_remove]
 
-    g.remove_edge(*edge_to_remove[0:2])
-    g.add_edge(*edge_to_remove)
-    g.run()
+    [g.remove_edge(*e[0:2]) for e in edge_to_remove]
+    [g.add_edge(*e) for e in edge_to_remove]
+    g.print_all()
+    # g.run()
 
 # print_paths(res, edges, inv_nodes)
 local_ram = 19

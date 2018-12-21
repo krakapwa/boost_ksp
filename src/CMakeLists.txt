@@ -10,7 +10,7 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(Python_ADDITIONAL_VERSIONS 3.4)
-# find_package(PythonLibs 3 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
 
 message("Include dirs of Python: " ${PYTHON_INCLUDE_DIRS} )
 message("Libs of Python: " ${PYTHON_LIBRARIES} )

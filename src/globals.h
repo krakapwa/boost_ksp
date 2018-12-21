@@ -98,11 +98,10 @@ typedef adjacency_list<vecS, vecS, directedS, VertexProperty, EdgeProperty,
 //     VertexProperty, EdgeProperty, GraphProperty> MyGraph;
 
 typedef graph_traits<MyGraph>::vertex_iterator VertexIter;
-typedef graph_traits<MyGraph>::edge_descriptor Edge;
+typedef graph_traits<MyGraph>::edge_descriptor EdgeDesc;
 typedef std::vector<graph_traits<MyGraph>::vertex_descriptor> VertexPath;
 
-typedef graph_traits<MyGraph>::vertex_descriptor Vertex;
-typedef std::vector<graph_traits<MyGraph>::edge_descriptor> EdgeVec;
+typedef graph_traits<MyGraph>::vertex_descriptor VertexDesc;
 typedef graph_traits<MyGraph>::edge_iterator EdgeIter;
 typedef graph_traits<MyGraph>::out_edge_iterator OutEdgeIter;
 
@@ -114,6 +113,42 @@ std::vector<std::size_t> idx_desc_sort(const std::vector<T> &v) {
             [&v](const auto &lhs, const auto &rhs) { return v[lhs] > v[rhs]; });
   return result;
 }
+
+// We hold here two vertex descriptors
+struct Edge{
+  VertexDesc in;
+  VertexDesc out;
+
+  Edge(){}
+
+  Edge(const VertexDesc & u,
+       const VertexDesc & v){
+    in = u;
+    out = v;
+  }
+  
+  Edge(const EdgeDesc & e_desc, const MyGraph &a_g){
+    in = source(e_desc, a_g);
+    out = target(e_desc, a_g);
+  }
+
+  std::pair<EdgeDesc, bool> to_edge_desc(const MyGraph & g) const{
+    // convert Edge object to EdgeDesc.
+    // if graph g doesn't contain such edge, an empty
+    // EdgeDesc is returned
+    std::pair<EdgeDesc, bool> e = edge(in, out, g);
+    if(!e.second){
+
+      BOOST_LOG_TRIVIAL(trace) << "to_edge_desc error."
+                              << " edge with vertex descriptors"
+                              << " (" << in << "," << out << ")"
+                              << "does not exist in graph";
+    }
+    return e;
+  }
+};
+
+typedef std::vector<Edge> EdgeVec;
 
 // We'll make extensive use of edge sets
 struct EdgeSet {
@@ -129,7 +164,7 @@ struct EdgeSet {
 
   // copy constructor
   EdgeSet(const EdgeSet &old) {
-    BOOST_LOG_TRIVIAL(info) << "called copy constructor EdgeSet";
+    // BOOST_LOG_TRIVIAL(info) << "called copy constructor EdgeSet";
     edges.clear();
     this->g = old.g;
     *this += old;
@@ -137,28 +172,19 @@ struct EdgeSet {
 
   EdgeSet &operator+=(const EdgeSet &p) {
 
-    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSet -> EdgeSet";
-    // BOOST_LOG_TRIVIAL(info) << "this->g: " << g
-    //                         << " p.g: " << p.g;
     try{
       if(g != p.g) throw 1;
     }
     catch(int e){
 
-      BOOST_LOG_TRIVIAL(info) << "exception " << e;
-      BOOST_LOG_TRIVIAL(info) << "operator += from EdgeSet to EdgeSet"
+      BOOST_LOG_TRIVIAL(trace) << "operator += from EdgeSet to EdgeSet"
                               << " graphs don't match!";
 
     }
-    BOOST_LOG_TRIVIAL(info) << "p.edges.size(): " << p.edges.size();
-    BOOST_LOG_TRIVIAL(info) << "edges.size(): " << edges.size();
-    // edges.insert(this->edges.end(), p.edges.begin(), p.edges.end());
     for(unsigned int i=0; i < p.edges.size(); ++ i){
-      // BOOST_LOG_TRIVIAL(info) << "p.edges[" << i << "]: " << p.edges[i];
       *this += p.edges[i];
 
     }
-    BOOST_LOG_TRIVIAL(debug) << "inserted!";
 
     return *this;
   }
@@ -181,15 +207,17 @@ struct EdgeSet {
 
   EdgeSet operator-=(const Edge &e) {
 
-    Vertex curr_u;
-    Vertex curr_v;
-    Vertex u = source(e, *g);
-    Vertex v = target(e, *g);
+    VertexDesc curr_u;
+    VertexDesc curr_v;
+    VertexDesc u = e.in;
+    VertexDesc v = e.out;
     EdgeVec new_edges;
 
     for (unsigned int i = 0; i < edges.size(); ++i) {
-      curr_u = source(edges[i], *g);
-      curr_v = target(edges[i], *g);
+      // curr_u = source(edges[i], *g);
+      curr_u = edges[i].in;
+      // curr_v = target(edges[i], *g);
+      curr_v = edges[i].out;
       if (!(((*g)[u].id == (*g)[curr_u].id) &&
             ((*g)[v].id == (*g)[curr_v].id))) {
         new_edges.push_back(edges[i]);
@@ -209,7 +237,6 @@ struct EdgeSet {
     g = new_set.g;
     edges.clear();
     edges = new_set.edges;
-    BOOST_LOG_TRIVIAL(trace) << "EdgeSet operator= returning";
 
     return *this;
   }
@@ -218,13 +245,11 @@ struct EdgeSet {
 
     for (unsigned int i = 0; i < edges.size(); ++i) {
 
-      BOOST_LOG_TRIVIAL(trace) << "(" << (*g)[source(edges[i], *g)].name << ","
-                               << (*g)[target(edges[i], *g)].name << ")"
+      BOOST_LOG_TRIVIAL(trace) << "(" << (*g)[edges[i].in].name << ","
+                               << (*g)[edges[i].out].name << ")"
                                 << "/"
-                               << "(" << (*g)[source(edges[i], *g)].id << ","
-                               << (*g)[target(edges[i], *g)].id << ") "
-                               << "label: " << (*g)[edges[i]].label
-                               << " weight: " << (*g)[edges[i]].weight;
+                               << "(" << (*g)[edges[i].in].id << ","
+                               << (*g)[edges[i].out].id << ") ";
     }
     
   }
@@ -250,15 +275,15 @@ struct EdgeSet {
   }
 
   EdgeSet &remove_edge(const Edge &e) {
-    Vertex curr_u;
-    Vertex curr_v;
+    VertexDesc curr_u;
+    VertexDesc curr_v;
 
-    Vertex u = source(e, *g);
-    Vertex v = target(e, *g);
+    VertexDesc u = e.in;
+    VertexDesc v = e.out;
 
     for (unsigned int i = 0; i < this->size(); ++i) {
-      curr_u = source(this->edges[i], *g);
-      curr_v = target(this->edges[i], *g);
+      curr_u = this->edges[i].in;
+      curr_v = this->edges[i].out;
       if (((*g)[curr_u].id == (*g)[u].id) && ((*g)[curr_v].id == (*g)[v].id)) {
         this->edges.erase(this->edges.begin() + i);
         break;
@@ -268,13 +293,13 @@ struct EdgeSet {
     return *this;
   }
 
-  EdgeSet &remove_edge(const Vertex &u, const Vertex &v) {
-    Vertex curr_u;
-    Vertex curr_v;
+  EdgeSet &remove_edge(const VertexDesc &u, const VertexDesc &v) {
+    VertexDesc curr_u;
+    VertexDesc curr_v;
 
     for (unsigned int i = 0; i < this->size(); ++i) {
-      curr_u = source(this->edges[i], *g);
-      curr_v = target(this->edges[i], *g);
+      curr_u = this->edges[i].in;
+      curr_v = this->edges[i].out;
       if (((*g)[curr_u].id == (*g)[u].id) && ((*g)[curr_v].id == (*g)[v].id)) {
         this->edges.erase(this->edges.begin() + i);
         break;
@@ -287,14 +312,14 @@ struct EdgeSet {
   Edge next(const Edge &e) {
 
     unsigned int ind_e;
-    Vertex u, v;
-    u = source(e, *g);
-    v = target(e, *g);
-    Vertex curr_u, curr_v;
+    VertexDesc u, v;
+    u = e.in;
+    v = e.out;
+    VertexDesc curr_u, curr_v;
 
     for (unsigned int i = 0; i < size(); ++i) {
-      curr_u = source(edges[i], *g);
-      curr_v = target(edges[i], *g);
+      curr_u = edges[i].in;
+      curr_v = edges[i].out;
 
       if ((*g)[curr_u].id == (*g)[u].id && (*g)[curr_v].id == (*g)[v].id) {
         ind_e = i;
@@ -310,9 +335,9 @@ struct EdgeSet {
 
   bool are_contiguous(const Edge &e0, const Edge &e1) {
 
-    Vertex u, v;
-    v = target(e0, *g);
-    u = source(e1, *g);
+    VertexDesc u, v;
+    v = e0.out;
+    u = e1.in;
     if ((*g)[u].id == (*g)[v].id)
       return true;
     else
@@ -321,11 +346,11 @@ struct EdgeSet {
 
   int is_discontinuous() {
 
-    Vertex u, v;
+    VertexDesc u, v;
 
     for (unsigned int i = 0; i < size() - 1; ++i) {
-      u = target(edges[i], *g);
-      v = source(edges[i + 1], *g);
+      u = edges[i].out;
+      v = edges[i + 1].in;
       if ((*g)[u].id != (*g)[v].id)
         return i + 1;
     }
@@ -335,24 +360,24 @@ struct EdgeSet {
   bool is_contiguous_after(const Edge &e) {
 
     Edge e_next = next(e);
-    Vertex u, v;
-    v = target(e, *g);
-    u = source(e_next, *g);
+    VertexDesc u, v;
+    v = e.out;
+    u = e_next.in;
     if ((*g)[u].id == (*g)[v].id)
       return true;
     else
       return false;
   }
 
-  bool has_vertex(const Vertex &u) {
+  bool has_vertex(const VertexDesc &u) {
 
     EdgeSet::iterator it;
     int curr_u_id;
     int curr_v_id;
 
     for (it = begin(); it != end(); ++it) {
-      curr_u_id = ((*g)[source(*it, *g)]).id;
-      curr_v_id = ((*g)[target(*it, *g)]).id;
+      curr_u_id = ((*g)[(*it).in]).id;
+      curr_v_id = ((*g)[(*it).out]).id;
       if ((curr_u_id == (*(this->g))[u].id) ||
           (curr_v_id == (*(this->g))[u].id))
         return true;
@@ -361,13 +386,13 @@ struct EdgeSet {
     return false;
   }
 
-  bool has_out_vertex(const Vertex &u) {
+  bool has_out_vertex(const VertexDesc &u) {
 
     iterator it;
     vertex_id_type curr_u_id;
 
     for (it = begin(); it != end(); ++it) {
-      curr_u_id = ((*g)[source(*it, *g)]).id;
+      curr_u_id = ((*g)[(*it).in]).id;
       if ((curr_u_id == (*(g))[u].id))
         return true;
     }
@@ -378,42 +403,18 @@ struct EdgeSet {
   bool has_edge(const Edge &e) {
 
     EdgeSet::iterator it;
-    vertex_id_type u_id = (*g)[source(e, *g)].id;
-    vertex_id_type v_id = (*g)[target(e, *g)].id;
+    vertex_id_type u_id = (*g)[e.in].id;
+    vertex_id_type v_id = (*g)[e.out].id;
     vertex_id_type curr_u_id;
     vertex_id_type curr_v_id;
 
     for (it = begin(); it != end(); ++it) {
-      curr_u_id = ((*g)[source(*it, *g)]).id;
-      curr_v_id = ((*g)[target(*it, *g)]).id;
+      curr_u_id = ((*g)[(*it).in]).id;
+      curr_v_id = ((*g)[(*it).out]).id;
       if ((curr_u_id == u_id) && (curr_v_id == v_id))
         return true;
     }
     return false;
-  }
-
-  EdgeSet &remove_label(const int &label) {
-
-    EdgeSet out(*g);
-    for (unsigned int i = 0; i < edges.size(); ++i)
-      if ((*g)[edges[i]].label != label)
-        out += edges[i];
-
-    edges = out.edges;
-
-    return *this;
-  }
-
-  EdgeSet &keep_label(const int &label) {
-
-    EdgeSet out(*g);
-    for (unsigned int i = 0; i < edges.size(); ++i)
-      if ((*g)[edges[i]].label == label)
-        out += edges[i];
-
-    edges = out.edges;
-
-    return *this;
   }
 
   bool sort_descend_labels() {
@@ -422,7 +423,7 @@ struct EdgeSet {
     // make label vector
     std::vector<int> labels;
     for (unsigned int i = 0; i < edges.size(); ++i)
-      labels.push_back((*g)[edges[i]].label);
+      labels.push_back((*g)[edges[i].to_edge_desc(*g).first].label);
 
     // get indices that sort labels in descending order
     auto idxs = idx_desc_sort(labels);
@@ -440,7 +441,8 @@ struct EdgeSet {
     // are edges sorted in descending order according to their label?
 
     for (unsigned int i = 1; i < edges.size(); ++i)
-      if ((*g)[edges[i]].label > (*g)[edges[i - 1]].label)
+      if ((*g)[edges[i-1].to_edge_desc(*g).first].label >
+          (*g)[edges[i].to_edge_desc(*g).first].label)
         return false;
 
     return true;
@@ -449,9 +451,10 @@ struct EdgeSet {
   bool has_label(const int &label) {
     // Is there an edge with that label?
 
-    for (unsigned int i = 0; i < edges.size(); ++i)
-      if ((*g)[edges[i]].label == label)
+    for (unsigned int i = 0; i < edges.size(); ++i){
+      if ((*g)[edges[i].to_edge_desc(*g).first].label == label)
         return true;
+    }
 
     return false;
   }
@@ -459,13 +462,9 @@ struct EdgeSet {
   EdgeSet get_invalid_edges(const MyGraph &g_test) {
 
     EdgeSet p_invalid(*g);
-    std::pair<Edge, bool> e;
 
-    Vertex u, v;
     for (unsigned int i = 0; i < edges.size(); ++i) {
-      u = source(edges[i], *g);
-      v = target(edges[i], *g);
-      e = edge(u, v, g_test);
+      std::pair<EdgeDesc, bool> e = edges[i].to_edge_desc(g_test);
       if (!e.second)
         p_invalid += edges[i];
     }
@@ -478,36 +477,17 @@ struct EdgeSet {
     // this works in-place
 
     EdgeSet p_valid(new_g);
-    std::pair<Edge, bool> e;
-
-    Vertex u, v;
 
     for (unsigned int i = 0; i < edges.size(); ++i) {
-      u = source(edges[i], *g);
-      v = target(edges[i], *g);
-      e = edge(u, v, new_g);
+      std::pair<EdgeDesc, bool> e = edges[i].to_edge_desc(new_g);
       if (e.second)
-        p_valid += e.first;
+        p_valid += edges[i];
     }
 
     this->g = p_valid.g;
     this->edges = p_valid.edges;
 
     return *this;
-  }
-
-  std::pair<Edge, bool> convert_edge(Edge e, const MyGraph &g_p,
-                                     bool inv_mode) {
-    // Convert edge to new graph
-    // In place conversion
-
-    std::pair<Edge, bool> e_out;
-    if (inv_mode)
-      e_out = edge(target(e, g_p), source(e, g_p), *g);
-    else
-      e_out = edge(source(e, g_p), target(e, g_p), *g);
-
-    return e_out;
   }
 };
 
@@ -544,23 +524,6 @@ inline EdgeSet operator-(const EdgeSet & p0, const EdgeSet & p1) {
   return p_out;
 }
 
-class LabelSorter {
-  MyGraph g;
-
-public:
-  LabelSorter(MyGraph a_g) { g = a_g; }
-  bool compareLabels(const Edge e0, const Edge e1, MyGraph g) const {
-
-    BOOST_LOG_TRIVIAL(trace)
-        << "compareLabels (e0, e1): " << g[e0].label << "," << g[e1].label
-        << " return " << (g[e0].label > g[e1].label);
-    return g[e0].label > g[e1].label;
-  }
-  bool operator()(const Edge & e0, const Edge & e1) const {
-    return compareLabels(e0, e1, g);
-  }
-};
-
 struct EdgeSets {
   std::vector<EdgeSet> sets;
   const MyGraph *g;
@@ -573,20 +536,16 @@ struct EdgeSets {
 
   EdgeSets(const EdgeSets &old) {
     // copy constructor
-    BOOST_LOG_TRIVIAL(debug) << "in copy constructor EdgeSets";
     g = old.g;
     sets = old.sets;
-    // BOOST_LOG_TRIVIAL(trace) << "in copy constructor. done append";
   }
 
   EdgeSets &operator=(const EdgeSets &other)
   {
-    BOOST_LOG_TRIVIAL(debug) << "in operator=";
 
     EdgeSets tmp(other);
     this->swap(tmp);
     
-    BOOST_LOG_TRIVIAL(debug) << "copied";
     return *this;
   }
 
@@ -598,36 +557,23 @@ struct EdgeSets {
 
   EdgeSets &operator+=(const EdgeSet &new_set) {
 
-    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSet -> EdgeSets";
-      // BOOST_LOG_TRIVIAL(info) << "this->g: " << g
-      //                         << " new_set.g: " << new_set.g;
-
     try{
       if(g != new_set.g) throw 1;
     }
     catch(int e){
 
-      BOOST_LOG_TRIVIAL(info) << "exception " << e;
       BOOST_LOG_TRIVIAL(info) << "operator += from EdgeSet to EdgeSets"
                               << " graphs don't match!";
     }
-    BOOST_LOG_TRIVIAL(debug) << "will push_back EdgeSet to EdgeSets";
     sets.push_back(new_set);
-    BOOST_LOG_TRIVIAL(debug) << "done append EdgeSet -> EdgeSets";
 
     return *this;
   }
 
   EdgeSets operator+=(const EdgeSets &new_sets) {
-    BOOST_LOG_TRIVIAL(debug) << "in append EdgeSets -> EdgeSets";
-    BOOST_LOG_TRIVIAL(trace) << "new_sets.size():  " << new_sets.size();
-    BOOST_LOG_TRIVIAL(trace) << "this->size(): " << this->size();
-    // new_sets.print();
-
-    for (unsigned int i = 0; i < new_sets.size(); ++i) {
-      BOOST_LOG_TRIVIAL(trace) << "in append loop";
+    for (unsigned int i = 0; i < new_sets.size(); ++i) 
       *this += new_sets[i];
-    }
+
     return *this;
   }
 
@@ -667,8 +613,6 @@ struct EdgeSets {
 
   EdgeSets convert_to_graph(const MyGraph &new_g) {
     // This converts in-place
-
-    BOOST_LOG_TRIVIAL(debug) << "EdgeSets convert_to_graph";
 
     for (unsigned int i = 0; i < this->sets.size(); ++i) {
       this->sets[i].convert_to_graph(new_g);

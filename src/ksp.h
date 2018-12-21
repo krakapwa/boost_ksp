@@ -43,7 +43,7 @@ class Ksp {
                     std::string loglevel,
                     bool min_cost,
                     bool return_edges);
-        Vertex add_vertex(vertex_id_type id, std::string str);
+        VertexDesc add_vertex(vertex_id_type id, std::string str);
 
         void print_all();
         void remove_vertex(vertex_id_type u_id);
@@ -74,8 +74,8 @@ class Ksp {
         MyGraph * G_c; //with transformed edge costs
 
         vertex_id_type n_vertices;
-        Vertex source_vertex;
-        Vertex sink_vertex;
+        VertexDesc source_vertex;
+        VertexDesc sink_vertex;
 
         int l_max;
 
@@ -96,8 +96,8 @@ class Ksp {
 
         std::tuple<EdgeSet, bool, std::vector<double>>
         dijkstra_shortest_paths(const MyGraph & g,
-                                Vertex source_vertex,
-                                Vertex sink_vertex);
+                                VertexDesc source_vertex,
+                                VertexDesc sink_vertex);
 
         void cost_transform(const std::vector<double> & distance,
                             MyGraph & g_out);
